@@ -1,0 +1,19 @@
+[server]
+# Matches the app's own 25 MB limit (profiler.MAX_FILE_MB).
+maxUploadSize = 25
+
+[browser]
+# Don't send usage statistics to Streamlit.
+gatherUsageStats = false
+
+[client]
+# Show generic error messages in the browser; details go to the server console.
+showErrorDetails = "none"
+toolbarMode = "viewer"
+
+[theme]
+base = "light"
+primaryColor = "#1f6f8b"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f2f6f8"
+textColor = "#1c2b33"
