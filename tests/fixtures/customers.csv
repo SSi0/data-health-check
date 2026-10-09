@@ -1,0 +1,201 @@
+customer_id,full_name,email,phone,ssn,street_address,city,state,zip_code,credit_card,ip_address,signup_date,account_balance,plan,is_active,notes
+10000,Keiko Ellison,keiko.ellison0@example.com,(202) 555-0109,968-22-6991,9558 Maple Ln,Georgetown,KY,38140,4111 1111 1111 1111,192.0.2.23,2025-07-14,163.25,Enterprise,yes,
+10001,Hector Vance,hector.vance1@example.com,(202) 555-0173,974-60-1812,3632 Maple Ln,Madison,WI,27455,5555 5555 5555 4444,192.0.2.108,2025-03-18,412.52,Starter,yes,
+10002,Gwen Lindqvist,gwen.lindqvist2@example.com,(305) 555-0172,907-89-4374,8143 Aspen Rd,Springfield,IL,71027,3782 822463 10005,192.0.2.237,2025-08-12,1358.79,Starter,yes,
+10003,Priya Kowalski,priya.kowalski3@example.com,(917) 555-0136,977-19-2934,8397 Aspen Ave,Madison,WI,54833,4012 8888 8888 1881,192.0.2.239,2025-08-14,3.88,Pro,no,
+10004,Priya Tran,priya.tran4@example.com,(917) 555-0108,911-44-8767,1074 Maple Way,Clinton,NY,50580,6011 1111 1111 1117,192.0.2.148,2025-11-27,2117.33,Pro,yes,
+10005,Tess Dunn,tess.dunn5@example.com,(202) 555-0127,998-46-3119,4066 Aspen Blvd,Georgetown,KY,75078,4111 1111 1111 1111,192.0.2.43,2025-08-13,2657.09,Enterprise,no,
+10006,Luis Moreau,luis.moreau6@example.com,(312) 555-0110,922-29-4800,3832 Maple Blvd,Riverton,WY,87217,4012 8888 8888 1881,192.0.2.68,2025-05-01,557.52,Pro,yes,prefers email
+10007,Tess Vance,tess.vance7@example.com,(202) 555-0158,999-97-7428,6531 Aspen Blvd,Madison,WI,23570,5105 1051 0510 5100,192.0.2.163,2025-07-02,791.17,Enterprise,yes,
+10008,Blake Dunn,blake.dunn8@example.com,(312) 555-0168,912-56-1417,1162 Birch Ln,Springfield,IL,59313,4012 8888 8888 1881,192.0.2.163,2025-05-12,2931.85,Free,no,
+10009,Jonah Castillo,jonah.castillo9@example.com,(305) 555-0195,943-43-8841,2655 Maple Ave,Riverton,WY,79239,5555 5555 5555 4444,192.0.2.38,2025-12-18,4553.56,Pro,yes,prefers email
+10010,Quinn Lindqvist,quinn.lindqvist10@example.com,(617) 555-0198,928-78-9873,8246 Juniper Way,Riverton,WY,39234,3782 822463 10005,192.0.2.208,2025-04-26,1044.82,Starter,yes,
+10011,Yara Abbott,yara.abbott11@example.com,(503) 555-0160,933-34-6640,7337 Juniper Rd,Springfield,IL,20556,4012 8888 8888 1881,192.0.2.27,2025-04-16,822.87,Free,no,
+10012,Uma Castillo,uma.castillo12@example.com,(305) 555-0149,991-35-8832,2934 Aspen Way,Clinton,NY,53583,4111 1111 1111 1111,192.0.2.206,2025-12-13,2208.43,Free,yes,VIP
+10013,Avery Ellison,avery.ellison13@example.com,(917) 555-0183,918-88-8771,5751 Cedar Ln,Salem,OR,81864,4012 8888 8888 1881,192.0.2.6,2025-01-26,4848.63,Starter,no,VIP
+10014,Gwen Abbott,gwen.abbott14@example.com,(415) 555-0137,964-40-6341,4259 Aspen Ave,Fairview,TX,17982,6011 1111 1111 1117,192.0.2.91,2025-08-22,2833.41,Enterprise,yes,
+10015,Quinn Abbott,quinn.abbott15@example.com,(917) 555-0199,923-87-1064,2464 Cedar Ave,Clinton,NY,72061,3782 822463 10005,192.0.2.186,2025-02-18,121.13,Enterprise,yes,
+10016,Gwen Ibarra,gwen.ibarra16@example.com,(305) 555-0164,957-81-1456,1048 Elm Rd,Springfield,IL,90285,3782 822463 10005,192.0.2.156,2025-09-07,3402.2,Enterprise,yes,
+10017,Iris Sato,iris.sato17@example.com,(917) 555-0117,953-25-7428,7253 Juniper St,Riverton,WY,97969,4012 8888 8888 1881,192.0.2.110,2025-02-07,3281.26,Starter,no,
+10018,Elliot Okafor,elliot.okafor18@example.com,(305) 555-0150,962-30-4665,2655 Aspen Ln,Riverton,WY,62928,5555 5555 5555 4444,192.0.2.108,2025-04-12,1456.33,Free,no,
+10019,Wen Abbott,wen.abbott19@example.com,(617) 555-0166,979-47-9392,1063 Oak Ave,Georgetown,KY,23733,4111 1111 1111 1111,192.0.2.68,2025-05-02,4510.67,Starter,no,prefers email
+10020,Iris Moreau,iris.moreau20@example.com,(917) 555-0189,941-21-5572,952 Cedar Blvd,Riverton,WY,19491,5555 5555 5555 4444,192.0.2.241,2025-01-21,260.54,Starter,yes,call back
+10021,Olga Abbott,olga.abbott21@example.com,(702) 555-0134,979-26-1707,8642 Birch St,Fairview,TX,31161,5555 5555 5555 4444,192.0.2.13,2025-03-07,4647.68,Starter,no,
+10022,Farah Ibarra,farah.ibarra22@example.com,(202) 555-0132,904-11-1302,8294 Birch Ln,Fairview,TX,72227,4012 8888 8888 1881,192.0.2.240,2025-08-04,3223.27,Enterprise,no,
+10023,Gwen Hayes,gwen.hayes23@example.com,(415) 555-0190,993-91-3289,6640 Juniper St,Fairview,TX,27015,4111 1111 1111 1111,192.0.2.19,2025-11-24,4375.24,Free,yes,prefers email
+10024,Quinn Jensen,quinn.jensen24@example.com,(415) 555-0188,937-15-8527,3046 Cedar Rd,Salem,OR,68435,4111 1111 1111 1111,192.0.2.68,2025-06-11,4857.64,Starter,yes,
+10025,Farah Abbott,farah.abbott25@example.com,(702) 555-0110,960-45-9237,3302 Birch Ln,Fairview,TX,10648,4111 1111 1111 1111,192.0.2.68,2025-02-05,,Free,no,
+10026,Carmen Tran,carmen.tran26@example.com,(312) 555-0184,991-86-7381,5353 Elm Ave,Salem,OR,47247,6011 1111 1111 1117,192.0.2.159,2025-11-05,27.7,Enterprise,yes,prefers email
+10027,Samir Abbott,samir.abbott27@example.com,(415) 555-0110,903-15-3180,5919 Oak Blvd,Clinton,NY,69164,3782 822463 10005,192.0.2.13,2025-11-01,3056.38,Enterprise,no,
+10028,Carmen Ramirez,carmen.ramirez28@example.com,(305) 555-0184,967-18-8763,4141 Oak Rd,Salem,OR,40773,6011 1111 1111 1117,192.0.2.194,2025-04-08,3647.11,Enterprise,no,
+10029,Victor Jensen,victor.jensen29@example.com,(202) 555-0178,980-92-4248,1279 Cedar Rd,Clinton,NY,43284,6011 1111 1111 1117,192.0.2.191,2025-12-10,3029.98,Enterprise,yes,
+10030,Victor Dunn,victor.dunn30@example.com,(415) 555-0186,962-47-9462,4688 Elm Blvd,Madison,WI,71124,4111 1111 1111 1111,192.0.2.229,2025-09-07,1420.71,Enterprise,yes,
+10031,Quinn Okafor,quinn.okafor31@example.com,(702) 555-0126,926-19-2479,2332 Willow Rd,Fairview,TX,27380,3782 822463 10005,192.0.2.210,2025-11-17,1253.75,Pro,yes,call back
+10032,Priya Moreau,priya.moreau32@example.com,(312) 555-0100,962-97-8385,6652 Willow Way,Springfield,IL,28442,5105 1051 0510 5100,192.0.2.89,2025-07-11,428.73,Pro,no,
+10033,Gwen Abbott,gwen.abbott33@example.com,(503) 555-0132,947-18-7437,6402 Oak Rd,Madison,WI,66105,5555 5555 5555 4444,192.0.2.219,2025-01-09,328.89,Pro,yes,VIP
+10034,Nikhil Ramirez,nikhil.ramirez34@example.com,(415) 555-0198,947-64-1475,6564 Birch Way,Fairview,TX,20561,4111 1111 1111 1111,192.0.2.239,2025-12-14,2144.47,Pro,no,VIP
+10035,Rosa Ellison,rosa.ellison35@example.com,(917) 555-0153,943-46-5878,4200 Willow Blvd,Riverton,WY,95982,4012 8888 8888 1881,192.0.2.78,2025-08-18,3278.16,Starter,yes,
+10036,Priya Sato,priya.sato36@example.com,(917) 555-0142,997-67-8002,2297 Birch Ave,Riverton,WY,21890,4012 8888 8888 1881,192.0.2.88,2025-09-03,1460.3,Starter,yes,prefers email
+10037,Mara Novak,mara.novak37@example.com,(415) 555-0148,934-53-2016,8171 Willow Ln,Madison,WI,57204,4012 8888 8888 1881,192.0.2.176,2025-09-17,3074.06,Starter,yes,call back
+10038,Mara Moreau,mara.moreau38@example.com,(917) 555-0155,939-12-3084,538 Aspen Way,Madison,WI,72032,3782 822463 10005,192.0.2.126,2025-01-03,1835.91,Enterprise,no,VIP
+10039,Hector Ellison,hector.ellison39@example.com,(305) 555-0192,989-92-8492,1402 Maple St,Riverton,WY,26469,4012 8888 8888 1881,192.0.2.146,2025-01-21,3518.11,Pro,no,prefers email
+10040,Dana Castillo,dana.castillo40@example.com,(415) 555-0149,933-38-1018,181 Willow Blvd,Fairview,TX,46517,5555 5555 5555 4444,192.0.2.166,2025-04-16,2536.64,Free,no,
+10041,Blake Abbott,blake.abbott41@example.com,(917) 555-0186,982-63-2328,4224 Birch Way,Riverton,WY,65616,5555 5555 5555 4444,192.0.2.59,2025-08-02,3418.28,Pro,no,
+10042,Jonah Ramirez,jonah.ramirez42@example.com,(415) 555-0163,925-49-4177,3791 Elm Ave,Springfield,IL,44736,5555 5555 5555 4444,192.0.2.28,2025-10-16,2972.51,Enterprise,no,
+10043,Tess Ellison,tess.ellison43@example.com,(202) 555-0127,903-86-3325,6815 Maple Way,Georgetown,KY,17882,4012 8888 8888 1881,192.0.2.101,2025-08-23,4394.63,Free,yes,
+10044,Uma Ramirez,uma.ramirez44@example.com,(917) 555-0104,939-95-7203,6135 Juniper Blvd,Madison,WI,32185,4111 1111 1111 1111,192.0.2.1,2025-02-09,219.97,Free,yes,
+10045,Jonah Novak,jonah.novak45@example.com,(202) 555-0190,960-35-7106,8882 Elm Ave,Springfield,IL,52376,5555 5555 5555 4444,192.0.2.189,2025-08-01,3084.64,Enterprise,yes,
+10046,Carmen Barnes,carmen.barnes46@example.com,(415) 555-0195,908-87-6555,5956 Willow Rd,Fairview,TX,90868,4111 1111 1111 1111,192.0.2.68,2025-12-23,3385.8,Pro,yes,prefers email
+10047,Uma Castillo,uma.castillo47@example.com,(415) 555-0113,960-69-7332,4123 Aspen Blvd,Springfield,IL,27394,5105 1051 0510 5100,192.0.2.47,2025-01-26,4641.49,Starter,yes,call back
+10048,Olga Lindqvist,olga.lindqvist48@example.com,(305) 555-0165,925-60-3620,4061 Aspen St,Clinton,NY,95137,4111 1111 1111 1111,192.0.2.124,2025-09-18,1493.94,Free,yes,
+10049,Gwen Dunn,gwen.dunn49@example.com,(917) 555-0190,957-32-4837,2187 Aspen Blvd,Georgetown,KY,91304,6011 1111 1111 1117,192.0.2.61,2025-12-18,4204.33,Free,no,
+10050,Iris Lindqvist,iris.lindqvist50@example.com,(503) 555-0125,956-41-4043,4029 Birch Ave,Fairview,TX,46877,3782 822463 10005,192.0.2.49,2025-06-03,1859.56,Starter,yes,
+10051,Blake Dunn,blake.dunn51@example.com,(917) 555-0129,957-57-1661,4821 Birch St,Springfield,IL,16604,4012 8888 8888 1881,192.0.2.154,2025-10-07,4636.9,Starter,no,
+10052,Victor Abbott,victor.abbott52@example.com,(617) 555-0127,904-57-6570,2326 Maple Ave,Springfield,IL,43412,4111 1111 1111 1111,192.0.2.154,2025-12-21,4552.57,Pro,no,
+10053,Tess Jensen,tess.jensen53@example.com,(415) 555-0104,963-80-8921,1046 Aspen St,Springfield,IL,61812,6011 1111 1111 1117,192.0.2.141,2025-03-21,2576.79,Enterprise,no,call back
+10054,Victor Jensen,victor.jensen54@example.com,(202) 555-0139,995-82-6852,6794 Aspen St,Georgetown,KY,57681,6011 1111 1111 1117,192.0.2.51,2025-07-24,1905.86,Enterprise,yes,
+10055,Carmen Moreau,carmen.moreau55@example.com,(617) 555-0158,998-30-3129,253 Maple Ln,Salem,OR,28677,6011 1111 1111 1117,192.0.2.207,2025-07-03,2778.9,Starter,yes,
+10056,Quinn Fischer,quinn.fischer56@example.com,(305) 555-0149,962-35-5941,2085 Maple Blvd,Springfield,IL,51225,4111 1111 1111 1111,192.0.2.156,2025-11-13,248.73,Starter,yes,
+10057,Gwen Petrov,gwen.petrov57@example.com,(415) 555-0105,951-76-3563,6294 Juniper St,Riverton,WY,29590,4012 8888 8888 1881,192.0.2.249,2025-12-27,,Free,no,
+10058,Olga Sato,olga.sato58@example.com,(503) 555-0183,953-49-5083,6985 Aspen Way,Clinton,NY,58162,5105 1051 0510 5100,192.0.2.129,2025-08-06,-78.45,Enterprise,no,
+10059,Tess Okafor,tess.okafor59@example.com,(312) 555-0160,951-23-2099,2114 Juniper Blvd,Clinton,NY,57884,4111 1111 1111 1111,192.0.2.206,2025-08-17,,Starter,yes,
+10060,Yara Ramirez,yara.ramirez60@example.com,(202) 555-0196,964-58-3231,433 Oak Ln,Springfield,IL,24363,4012 8888 8888 1881,192.0.2.34,2025-08-10,4774.52,Starter,yes,VIP
+10061,Tess Ibarra,tess.ibarra61@example.com,(617) 555-0178,935-68-3352,4174 Elm Ave,Riverton,WY,87579,5555 5555 5555 4444,192.0.2.158,2025-09-08,,Starter,no,
+10062,Iris Kowalski,iris.kowalski62@example.com,(312) 555-0133,914-77-1795,5904 Elm Ln,Georgetown,KY,78347,3782 822463 10005,192.0.2.177,2025-02-09,4963.36,Enterprise,no,
+10063,Luis Tran,luis.tran63@example.com,(617) 555-0142,997-20-8246,3779 Cedar Ln,Riverton,WY,16329,5555 5555 5555 4444,192.0.2.210,2025-09-09,1412.38,Pro,yes,
+10064,Elliot Jensen,elliot.jensen64@example.com,(702) 555-0153,965-56-1782,2173 Elm Ave,Salem,OR,90284,6011 1111 1111 1117,192.0.2.12,2025-01-02,-186.4,Free,no,
+10065,Samir Jensen,samir.jensen65@example.com,(312) 555-0126,946-89-8780,2608 Cedar St,Salem,OR,41927,6011 1111 1111 1117,192.0.2.39,2025-08-04,131.08,Pro,no,call back
+10066,Blake Vance,blake.vance66@example.com,(617) 555-0176,982-84-8270,9871 Elm Ave,Clinton,NY,31639,4111 1111 1111 1111,192.0.2.12,2025-01-18,-68.83,Starter,yes,
+10067,Rosa Greene,rosa.greene67@example.com,(702) 555-0125,966-87-9305,6813 Cedar Ln,Riverton,WY,50551,4111 1111 1111 1111,192.0.2.77,2025-11-02,4969.12,Enterprise,yes,call back
+10068,Yara Okafor,yara.okafor68@example.com,(917) 555-0122,928-23-5283,3815 Maple St,Springfield,IL,53976,6011 1111 1111 1117,192.0.2.237,2025-12-28,,Enterprise,no,
+10069,Gwen Castillo,gwen.castillo69@example.com,(202) 555-0121,933-40-4322,2618 Juniper Ave,Salem,OR,60948,5555 5555 5555 4444,192.0.2.154,2025-04-13,4519.36,Enterprise,no,
+10070,Avery Novak,avery.novak70@example.com,(415) 555-0173,939-37-7415,9600 Oak Ln,Madison,WI,32484,4012 8888 8888 1881,192.0.2.9,2025-01-04,354.73,Pro,yes,
+10071,Blake Ellison,blake.ellison71@example.com,(202) 555-0189,908-15-2077,9684 Juniper Ave,Madison,WI,79978,6011 1111 1111 1117,192.0.2.17,2025-12-13,357.0,Free,yes,VIP
+10072,Uma Castillo,uma.castillo72@example.com,(503) 555-0161,912-26-2603,3368 Willow Rd,Clinton,NY,54107,5105 1051 0510 5100,192.0.2.67,2025-01-12,1134.85,Pro,no,
+10073,Jonah Underwood,jonah.underwood73@example.com,(202) 555-0152,903-65-9497,1620 Juniper Blvd,Madison,WI,16306,3782 822463 10005,192.0.2.145,2025-04-23,4283.64,Pro,yes,
+10074,Gwen Jensen,gwen.jensen74@example.com,(202) 555-0100,944-72-2567,8062 Cedar Blvd,Clinton,NY,87667,5555 5555 5555 4444,192.0.2.246,2025-09-09,2805.64,Starter,yes,
+10075,Uma Castillo,uma.castillo75@example.com,(305) 555-0180,941-55-2558,6584 Aspen Way,Georgetown,KY,21294,5105 1051 0510 5100,192.0.2.228,2025-11-01,1734.14,Enterprise,yes,call back
+10076,Uma Hayes,uma.hayes76@example.com,(312) 555-0168,976-98-1555,5719 Juniper Ln,Georgetown,KY,30358,5105 1051 0510 5100,192.0.2.170,2025-09-24,1481.34,Pro,yes,
+10077,Uma Hayes,uma.hayes77@example.com,(415) 555-0134,938-89-3532,2565 Birch Way,Salem,OR,52803,3782 822463 10005,192.0.2.134,2025-06-06,1028.31,Pro,yes,VIP
+10078,Dana Greene,dana.greene78@example.com,(312) 555-0118,938-48-8125,4496 Birch St,Georgetown,KY,93621,4111 1111 1111 1111,192.0.2.72,2025-04-13,,Enterprise,yes,prefers email
+10079,Jonah Okafor,jonah.okafor79@example.com,(312) 555-0132,977-61-1090,3979 Aspen Way,Springfield,IL,85232,3782 822463 10005,192.0.2.192,2025-11-14,4199.17,Starter,yes,
+10080,Nikhil Kowalski,nikhil.kowalski80@example.com,(305) 555-0153,931-61-3563,4106 Aspen Blvd,Fairview,TX,69663,4111 1111 1111 1111,192.0.2.160,2025-07-17,3311.27,Starter,no,
+10081,Priya Dunn,priya.dunn81@example.com,(503) 555-0169,927-30-4273,8516 Juniper St,Springfield,IL,85308,5105 1051 0510 5100,192.0.2.139,2025-04-23,,Pro,no,call back
+10082,Olga Greene,olga.greene82@example.com,(312) 555-0150,965-25-6824,937 Willow Rd,Madison,WI,60048,5105 1051 0510 5100,192.0.2.16,2025-01-03,1976.63,Pro,no,
+10083,Yara Moreau,yara.moreau83@example.com,(415) 555-0150,959-37-3695,2128 Oak Way,Salem,OR,35319,5105 1051 0510 5100,192.0.2.165,2025-09-24,975.13,Pro,no,call back
+10084,Rosa Vance,rosa.vance84@example.com,(917) 555-0145,929-44-7162,4164 Aspen Way,Riverton,WY,34364,5105 1051 0510 5100,192.0.2.1,2025-12-26,1262.3,Pro,no,
+10085,Tess Vance,tess.vance85@example.com,(617) 555-0119,938-59-1934,1407 Juniper Ave,Springfield,IL,79553,5555 5555 5555 4444,192.0.2.163,2025-10-01,3217.98,Free,no,
+10086,Samir Ellison,samir.ellison86@example.com,(415) 555-0123,999-67-6676,2511 Birch Blvd,Clinton,NY,80060,4012 8888 8888 1881,192.0.2.157,2025-12-20,4881.31,Pro,yes,
+10087,Quinn Castillo,quinn.castillo87@example.com,(917) 555-0185,914-81-2940,4343 Aspen Ave,Madison,WI,28263,5105 1051 0510 5100,192.0.2.127,2025-09-02,2318.73,Enterprise,yes,
+10088,Tess Abbott,tess.abbott88@example.com,(617) 555-0159,989-82-9152,4873 Elm Rd,Riverton,WY,65812,5105 1051 0510 5100,192.0.2.246,2025-11-03,738.7,Free,yes,
+10089,Yara Kowalski,yara.kowalski89@example.com,(305) 555-0165,961-72-3367,565 Birch Way,Clinton,NY,64472,6011 1111 1111 1117,192.0.2.33,2025-06-04,4280.79,Enterprise,yes,
+10090,Nikhil Ibarra,nikhil.ibarra90@example.com,(202) 555-0137,937-55-9089,6624 Juniper Ln,Salem,OR,45611,3782 822463 10005,192.0.2.89,2025-04-21,2359.4,Starter,no,
+10091,Samir Vance,samir.vance91@example.com,(202) 555-0151,992-80-7652,8945 Maple Blvd,Springfield,IL,49374,4111 1111 1111 1111,192.0.2.2,2025-01-07,4074.2,Free,no,
+10092,Victor Underwood,victor.underwood92@example.com,(305) 555-0127,905-95-8501,2859 Oak Way,Madison,WI,33763,4111 1111 1111 1111,192.0.2.108,2025-02-21,-130.18,Starter,no,prefers email
+10093,Jonah Fischer,jonah.fischer93@example.com,(202) 555-0140,902-65-1894,8165 Maple St,Georgetown,KY,65190,3782 822463 10005,192.0.2.179,2025-07-15,149.54,Starter,no,
+10094,Carmen Vance,carmen.vance94@example.com,(415) 555-0119,980-11-7995,88 Maple Way,Georgetown,KY,97735,4111 1111 1111 1111,192.0.2.253,2025-02-07,4321.66,Free,no,
+10095,Olga Fischer,olga.fischer95@example.com,(617) 555-0199,995-98-3372,1391 Willow Way,Springfield,IL,83071,6011 1111 1111 1117,192.0.2.128,2025-08-22,4648.2,Free,yes,
+10096,Uma Underwood,uma.underwood96@example.com,(702) 555-0139,939-86-3719,7978 Maple Rd,Springfield,IL,58177,3782 822463 10005,192.0.2.187,2025-08-16,3319.77,Free,no,
+10097,Nikhil Petrov,nikhil.petrov97@example.com,(917) 555-0134,996-82-6470,4800 Willow St,Georgetown,KY,91506,6011 1111 1111 1117,192.0.2.181,2025-10-11,4321.7,Free,yes,prefers email
+10098,Samir Novak,samir.novak98@example.com,(702) 555-0149,987-58-4839,7403 Willow Way,Riverton,WY,10220,5555 5555 5555 4444,192.0.2.68,2025-05-14,617.86,Free,no,VIP
+10099,Samir Ellison,samir.ellison99@example.com,(917) 555-0144,968-20-9847,9081 Elm Blvd,Fairview,TX,36270,6011 1111 1111 1117,192.0.2.239,2025-04-10,2955.87,Enterprise,yes,
+10100,Avery Moreau,avery.moreau100@example.com,(305) 555-0168,945-18-4815,6533 Willow Ln,Georgetown,KY,52073,5105 1051 0510 5100,192.0.2.130,2025-10-07,783.59,Starter,no,
+10101,Luis Moreau,luis.moreau101@example.com,(312) 555-0131,905-73-7128,1748 Juniper Way,Clinton,NY,70743,4111 1111 1111 1111,192.0.2.40,2025-06-20,-42.13,Free,yes,
+10102,Samir Petrov,samir.petrov102@example.com,(415) 555-0133,999-45-7978,1601 Elm Ln,Salem,OR,89786,4012 8888 8888 1881,192.0.2.66,2025-01-11,845.14,Free,yes,
+10103,Luis Okafor,luis.okafor103@example.com,(305) 555-0176,981-60-2964,1483 Willow Rd,Georgetown,KY,83987,4012 8888 8888 1881,192.0.2.165,2025-02-22,2433.81,Starter,no,VIP
+10104,Hector Fischer,hector.fischer104@example.com,(503) 555-0145,907-80-1455,780 Willow Ln,Springfield,IL,94762,5105 1051 0510 5100,192.0.2.15,2025-02-05,,Starter,no,
+10105,Uma Dunn,uma.dunn105@example.com,(617) 555-0147,932-59-3033,6153 Elm Blvd,Georgetown,KY,32095,5105 1051 0510 5100,192.0.2.62,2025-03-22,4439.28,Starter,yes,VIP
+10106,Hector Castillo,hector.castillo106@example.com,(617) 555-0195,917-67-2589,6319 Maple Way,Salem,OR,19850,5105 1051 0510 5100,192.0.2.249,2025-06-11,4079.92,Pro,yes,
+10107,Blake Fischer,blake.fischer107@example.com,(917) 555-0170,918-66-3447,4374 Aspen Blvd,Madison,WI,42342,4012 8888 8888 1881,192.0.2.7,2025-05-19,4165.73,Starter,no,
+10108,Olga Petrov,olga.petrov108@example.com,(312) 555-0165,907-90-4459,9184 Elm Rd,Springfield,IL,25622,5555 5555 5555 4444,192.0.2.194,2025-04-12,2046.71,Starter,yes,
+10109,Nikhil Fischer,nikhil.fischer109@example.com,(503) 555-0118,981-12-8243,8329 Juniper Ln,Springfield,IL,28368,5105 1051 0510 5100,192.0.2.1,2025-09-10,766.27,Enterprise,yes,
+10110,Elliot Fischer,elliot.fischer110@example.com,(415) 555-0191,922-35-2298,1442 Elm Rd,Salem,OR,32979,4012 8888 8888 1881,192.0.2.36,2025-10-22,3480.34,Pro,yes,
+10111,Yara Ramirez,yara.ramirez111@example.com,(202) 555-0166,944-52-5616,8087 Oak St,Georgetown,KY,63676,5105 1051 0510 5100,192.0.2.35,2025-11-09,1091.37,Pro,yes,VIP
+10112,Samir Underwood,samir.underwood112@example.com,(202) 555-0145,966-67-9448,1178 Oak Rd,Clinton,NY,42076,5555 5555 5555 4444,192.0.2.200,2025-12-28,1783.22,Free,no,VIP
+10113,Priya Okafor,priya.okafor113@example.com,(202) 555-0167,968-27-1338,4000 Oak Ave,Salem,OR,91143,4012 8888 8888 1881,192.0.2.43,2025-02-10,1102.38,Free,yes,VIP
+10114,Yara Greene,yara.greene114@example.com,(202) 555-0176,981-83-8601,8577 Birch Way,Fairview,TX,68223,4111 1111 1111 1111,192.0.2.90,2025-02-23,730.65,Enterprise,no,
+10115,Iris Dunn,iris.dunn115@example.com,(305) 555-0151,917-79-4726,3729 Cedar Way,Springfield,IL,85083,5105 1051 0510 5100,192.0.2.192,2025-07-06,,Enterprise,no,prefers email
+10116,Quinn Barnes,quinn.barnes116@example.com,(202) 555-0199,946-53-7565,3948 Juniper Way,Georgetown,KY,67092,3782 822463 10005,192.0.2.206,2025-06-27,1883.08,Pro,yes,prefers email
+10117,Hector Novak,hector.novak117@example.com,(202) 555-0146,913-77-4071,1144 Juniper Blvd,Madison,WI,36317,3782 822463 10005,192.0.2.172,2025-01-08,524.91,Enterprise,yes,
+10118,Uma Underwood,uma.underwood118@example.com,(503) 555-0180,969-14-2646,4115 Oak Ln,Fairview,TX,11791,5105 1051 0510 5100,192.0.2.61,2025-01-10,387.83,Starter,yes,
+10119,Quinn Ibarra,quinn.ibarra119@example.com,(917) 555-0175,968-28-8208,2040 Cedar Rd,Springfield,IL,63286,3782 822463 10005,192.0.2.74,2025-05-08,3626.84,Pro,no,
+10120,Hector Vance,hector.vance120@example.com,(415) 555-0170,990-56-8551,8988 Willow Ln,Georgetown,KY,72633,5105 1051 0510 5100,192.0.2.210,2025-05-01,1059.72,Enterprise,no,VIP
+10121,Farah Hayes,farah.hayes121@example.com,(617) 555-0162,934-46-4541,4851 Maple St,Fairview,TX,30783,3782 822463 10005,192.0.2.18,2025-10-28,1609.57,Enterprise,no,call back
+10122,Dana Ramirez,dana.ramirez122@example.com,(312) 555-0153,943-95-6774,2309 Birch Ln,Riverton,WY,90053,5555 5555 5555 4444,192.0.2.211,2025-09-04,3641.59,Enterprise,no,prefers email
+10123,Wen Ellison,wen.ellison123@example.com,(305) 555-0100,952-80-2924,8167 Aspen Ln,Georgetown,KY,29612,5105 1051 0510 5100,192.0.2.218,2025-05-28,3031.28,Enterprise,no,call back
+10124,Jonah Lindqvist,jonah.lindqvist124@example.com,(702) 555-0182,941-10-9184,6246 Elm Rd,Georgetown,KY,34144,3782 822463 10005,192.0.2.78,2025-03-14,2792.25,Free,no,call back
+10125,Tess Hayes,tess.hayes125@example.com,(415) 555-0154,901-13-1777,4213 Elm Rd,Fairview,TX,80312,5555 5555 5555 4444,192.0.2.138,2025-10-14,2490.73,Enterprise,no,
+10126,Tess Lindqvist,tess.lindqvist126@example.com,(202) 555-0186,908-77-4756,1631 Aspen Rd,Georgetown,KY,75655,5105 1051 0510 5100,192.0.2.167,2025-09-19,601.95,Enterprise,no,
+10127,Tess Tran,tess.tran127@example.com,(305) 555-0121,946-50-7007,1240 Willow Ln,Fairview,TX,33014,4111 1111 1111 1111,192.0.2.168,2025-05-23,1585.45,Enterprise,yes,
+10128,Quinn Greene,quinn.greene128@example.com,(415) 555-0152,923-17-2746,5796 Maple Way,Salem,OR,63925,4111 1111 1111 1111,192.0.2.202,2025-01-10,3495.32,Pro,no,
+10129,Victor Abbott,victor.abbott129@example.com,(312) 555-0163,998-80-5358,8717 Cedar Ln,Riverton,WY,36023,5105 1051 0510 5100,192.0.2.155,2025-02-05,615.21,Free,yes,
+10130,Quinn Petrov,quinn.petrov130@example.com,(917) 555-0178,955-17-1204,9493 Juniper Ave,Clinton,NY,41229,5555 5555 5555 4444,192.0.2.71,2025-03-02,1186.37,Free,no,
+10131,Mara Abbott,mara.abbott131@example.com,(415) 555-0150,974-15-8203,904 Birch Ave,Springfield,IL,39215,4111 1111 1111 1111,192.0.2.41,2025-10-28,,Enterprise,no,
+10132,Priya Castillo,priya.castillo132@example.com,(702) 555-0186,991-84-4627,6784 Willow Blvd,Riverton,WY,73489,4111 1111 1111 1111,192.0.2.203,2025-04-03,702.03,Starter,yes,
+10133,Luis Dunn,luis.dunn133@example.com,(702) 555-0142,951-93-2072,2029 Aspen Rd,Fairview,TX,82593,4012 8888 8888 1881,192.0.2.100,2025-04-15,1274.65,Free,no,
+10134,Elliot Hayes,elliot.hayes134@example.com,(312) 555-0111,925-44-9927,2103 Elm Blvd,Madison,WI,41481,4012 8888 8888 1881,192.0.2.95,2025-06-07,3556.82,Starter,no,
+10135,Hector Okafor,hector.okafor135@example.com,(312) 555-0190,933-86-8214,9636 Juniper Ln,Madison,WI,42276,5105 1051 0510 5100,192.0.2.156,2025-09-07,452.69,Free,no,prefers email
+10136,Mara Abbott,mara.abbott136@example.com,(312) 555-0139,901-59-2409,2910 Birch Rd,Madison,WI,34682,6011 1111 1111 1117,192.0.2.229,2025-02-03,2722.35,Pro,yes,VIP
+10137,Carmen Hayes,carmen.hayes137@example.com,(312) 555-0191,951-46-6831,6618 Elm Way,Fairview,TX,92394,4012 8888 8888 1881,192.0.2.240,2025-05-06,-46.21,Pro,no,
+10138,Wen Okafor,wen.okafor138@example.com,(702) 555-0145,980-22-3976,4785 Oak Rd,Riverton,WY,89811,6011 1111 1111 1117,192.0.2.57,2025-12-22,,Starter,no,VIP
+10139,Elliot Moreau,elliot.moreau139@example.com,(202) 555-0170,939-90-3943,9259 Birch Ln,Madison,WI,75259,6011 1111 1111 1117,192.0.2.134,2025-05-14,3284.7,Free,yes,
+10140,Blake Tran,blake.tran140@example.com,(202) 555-0131,987-24-1608,5229 Birch Rd,Salem,OR,21290,5105 1051 0510 5100,192.0.2.178,2025-12-13,4990.17,Starter,no,
+10141,Nikhil Okafor,nikhil.okafor141@example.com,(917) 555-0165,906-96-4374,7028 Cedar Blvd,Fairview,TX,34811,4111 1111 1111 1111,192.0.2.244,2025-12-27,3989.81,Starter,yes,
+10142,Blake Fischer,blake.fischer142@example.com,(617) 555-0152,911-35-6088,2257 Cedar Way,Fairview,TX,73759,6011 1111 1111 1117,192.0.2.124,2025-04-23,1056.9,Enterprise,yes,
+10143,Jonah Ellison,jonah.ellison143@example.com,(312) 555-0175,972-40-6465,1942 Aspen Ave,Madison,WI,98739,6011 1111 1111 1117,192.0.2.40,2025-10-15,4165.33,Starter,yes,
+10144,Luis Petrov,luis.petrov144@example.com,(202) 555-0107,935-48-4229,1821 Willow Blvd,Riverton,WY,24809,4012 8888 8888 1881,192.0.2.84,2025-08-15,2759.77,Free,yes,
+10145,Priya Castillo,priya.castillo145@example.com,(617) 555-0194,972-43-2782,8019 Aspen Blvd,Madison,WI,34878,3782 822463 10005,192.0.2.83,2025-01-12,4581.69,Pro,yes,
+10146,Avery Abbott,avery.abbott146@example.com,(702) 555-0118,937-57-4043,8618 Cedar St,Clinton,NY,50678,6011 1111 1111 1117,192.0.2.158,2025-06-13,759.62,Pro,yes,
+10147,Luis Ibarra,luis.ibarra147@example.com,(202) 555-0105,913-82-7606,838 Birch Blvd,Riverton,WY,65440,5105 1051 0510 5100,192.0.2.188,2025-03-10,2933.65,Starter,yes,
+10148,Uma Moreau,uma.moreau148@example.com,(202) 555-0156,961-34-4576,6112 Maple St,Springfield,IL,90050,3782 822463 10005,192.0.2.109,2025-03-10,,Enterprise,no,
+10149,Victor Fischer,victor.fischer149@example.com,(312) 555-0148,937-10-8260,9240 Juniper Ln,Madison,WI,35613,5105 1051 0510 5100,192.0.2.22,2025-09-11,2487.26,Starter,no,
+10150,Blake Kowalski,blake.kowalski150@example.com,(503) 555-0172,973-63-7039,7886 Cedar Rd,Salem,OR,55011,3782 822463 10005,192.0.2.227,2025-11-01,4210.17,Enterprise,yes,
+10151,Luis Sato,luis.sato151@example.com,(702) 555-0146,967-40-8231,6503 Willow St,Salem,OR,39785,4012 8888 8888 1881,192.0.2.248,2025-04-18,3699.2,Pro,yes,
+10152,Iris Petrov,iris.petrov152@example.com,(917) 555-0128,969-83-2851,8418 Oak Blvd,Riverton,WY,99062,4111 1111 1111 1111,192.0.2.205,2025-08-05,4290.08,Free,yes,call back
+10153,Mara Sato,mara.sato153@example.com,(415) 555-0172,960-21-3241,6127 Maple Blvd,Riverton,WY,41051,4111 1111 1111 1111,192.0.2.96,2025-01-01,3450.04,Enterprise,no,VIP
+10154,Nikhil Castillo,nikhil.castillo154@example.com,(415) 555-0172,914-55-3752,6022 Juniper Way,Salem,OR,99197,4111 1111 1111 1111,192.0.2.212,2025-05-04,1044.36,Pro,no,VIP
+10155,Luis Dunn,luis.dunn155@example.com,(617) 555-0177,914-14-4972,4181 Juniper Ave,Fairview,TX,68558,4111 1111 1111 1111,192.0.2.215,2025-10-15,,Free,yes,
+10156,Rosa Jensen,rosa.jensen156@example.com,(702) 555-0118,975-42-9821,4412 Elm St,Clinton,NY,13245,5555 5555 5555 4444,192.0.2.39,2025-08-17,,Free,yes,
+10157,Uma Underwood,uma.underwood157@example.com,(917) 555-0120,988-67-7445,3765 Oak Rd,Georgetown,KY,53158,3782 822463 10005,192.0.2.56,2025-05-05,,Starter,no,
+10158,Samir Okafor,samir.okafor158@example.com,(617) 555-0140,900-52-8920,5478 Birch St,Georgetown,KY,42602,5105 1051 0510 5100,192.0.2.225,2025-10-02,3080.55,Starter,no,
+10159,Quinn Ibarra,quinn.ibarra159@example.com,(312) 555-0189,904-81-2560,3274 Aspen Way,Fairview,TX,84943,6011 1111 1111 1117,192.0.2.26,2025-06-26,1264.23,Starter,yes,call back
+10160,Keiko Lindqvist,keiko.lindqvist160@example.com,(415) 555-0144,970-61-6479,1000 Juniper Way,Salem,OR,52362,5105 1051 0510 5100,192.0.2.129,2025-06-08,4007.93,Starter,yes,
+10161,Victor Okafor,victor.okafor161@example.com,(917) 555-0150,972-48-3767,9624 Oak Ave,Georgetown,KY,49516,6011 1111 1111 1117,192.0.2.79,2025-05-24,2773.87,Pro,yes,
+10162,Carmen Tran,carmen.tran162@example.com,(503) 555-0174,945-69-6848,7026 Oak Blvd,Riverton,WY,51845,4012 8888 8888 1881,192.0.2.71,2025-05-18,-80.03,Pro,yes,
+10163,Blake Moreau,blake.moreau163@example.com,(415) 555-0177,936-74-2631,3232 Birch Way,Georgetown,KY,17444,4012 8888 8888 1881,192.0.2.154,2025-01-03,181.91,Pro,yes,
+10164,Rosa Vance,rosa.vance164@example.com,(617) 555-0103,927-51-6353,453 Elm Blvd,Springfield,IL,89925,6011 1111 1111 1117,192.0.2.205,2025-06-06,98.73,Free,yes,
+10165,Priya Underwood,priya.underwood165@example.com,(503) 555-0159,901-13-6191,9252 Juniper St,Georgetown,KY,64412,3782 822463 10005,192.0.2.182,2025-12-27,1511.66,Starter,yes,
+10166,Carmen Lindqvist,carmen.lindqvist166@example.com,(617) 555-0154,944-78-3513,9866 Juniper Ave,Clinton,NY,91091,5555 5555 5555 4444,192.0.2.209,2025-12-16,3769.2,Pro,no,
+10167,Quinn Ramirez,quinn.ramirez167@example.com,(312) 555-0132,901-81-8794,1644 Juniper Ave,Fairview,TX,92431,4012 8888 8888 1881,192.0.2.103,2025-02-01,3048.08,Starter,yes,call back
+10168,Luis Ellison,luis.ellison168@example.com,(312) 555-0167,903-54-4974,7244 Elm Ave,Riverton,WY,93378,5555 5555 5555 4444,192.0.2.231,2025-07-15,902.88,Free,yes,prefers email
+10169,Carmen Vance,carmen.vance169@example.com,(617) 555-0107,929-82-7160,6726 Aspen Way,Georgetown,KY,92198,4012 8888 8888 1881,192.0.2.8,2025-05-01,1164.07,Starter,no,
+10170,Nikhil Vance,nikhil.vance170@example.com,(503) 555-0163,927-82-3567,7831 Willow Ave,Fairview,TX,49332,5555 5555 5555 4444,192.0.2.23,2025-06-01,2324.87,Starter,no,
+10171,Olga Greene,olga.greene171@example.com,(202) 555-0126,994-56-1756,7203 Cedar Blvd,Salem,OR,28323,5555 5555 5555 4444,192.0.2.176,2025-01-26,380.1,Free,yes,
+10172,Yara Lindqvist,yara.lindqvist172@example.com,(312) 555-0159,987-60-2478,6796 Juniper Way,Springfield,IL,97208,6011 1111 1111 1117,192.0.2.102,2025-06-02,2843.42,Free,yes,
+10173,Hector Tran,hector.tran173@example.com,(305) 555-0193,902-16-6185,1067 Oak St,Georgetown,KY,73878,4012 8888 8888 1881,192.0.2.135,2025-07-01,730.7,Starter,yes,
+10174,Priya Castillo,priya.castillo174@example.com,(415) 555-0128,993-19-5472,2913 Maple Rd,Fairview,TX,45258,4111 1111 1111 1111,192.0.2.248,2025-01-07,2445.51,Pro,no,
+10175,Blake Vance,blake.vance175@example.com,(503) 555-0170,942-98-7723,4410 Aspen Blvd,Georgetown,KY,51715,3782 822463 10005,192.0.2.108,2025-07-05,1812.8,Enterprise,yes,
+10176,Tess Ramirez,tess.ramirez176@example.com,(702) 555-0130,925-94-2903,1432 Maple Way,Fairview,TX,16489,5105 1051 0510 5100,192.0.2.178,2025-09-11,3361.23,Pro,no,
+10177,Yara Vance,yara.vance177@example.com,(917) 555-0165,943-85-9948,6234 Birch Way,Clinton,NY,59654,5555 5555 5555 4444,192.0.2.183,2025-02-13,4874.84,Pro,yes,prefers email
+10178,Victor Hayes,victor.hayes178@example.com,(503) 555-0133,960-54-9553,9668 Elm Ln,Salem,OR,38996,4012 8888 8888 1881,192.0.2.17,2025-09-12,2524.44,Pro,yes,
+10179,Victor Okafor,victor.okafor179@example.com,(202) 555-0141,948-56-8013,2025 Aspen Ave,Riverton,WY,42962,5105 1051 0510 5100,192.0.2.27,2025-06-12,3247.62,Pro,no,
+10180,Mara Jensen,mara.jensen180@example.com,(305) 555-0157,981-71-3859,8486 Cedar St,Georgetown,KY,99152,4012 8888 8888 1881,192.0.2.94,2025-08-17,3233.38,Pro,no,
+10181,Gwen Abbott,gwen.abbott181@example.com,(503) 555-0107,975-32-6022,8933 Willow Rd,Salem,OR,43504,4012 8888 8888 1881,192.0.2.68,2025-08-03,2530.92,Free,yes,
+10182,Jonah Underwood,jonah.underwood182@example.com,(617) 555-0105,991-66-7155,6025 Maple Way,Clinton,NY,48698,5105 1051 0510 5100,192.0.2.111,2025-11-20,4016.3,Enterprise,yes,
+10183,Wen Tran,wen.tran183@example.com,(305) 555-0185,926-52-2159,1319 Elm Blvd,Fairview,TX,61545,3782 822463 10005,192.0.2.107,2025-08-21,,Enterprise,no,prefers email
+10184,Nikhil Petrov,nikhil.petrov184@example.com,(305) 555-0156,950-72-3216,8395 Maple Way,Riverton,WY,40463,6011 1111 1111 1117,192.0.2.52,2025-07-18,11.06,Pro,no,
+10185,Hector Castillo,hector.castillo185@example.com,(202) 555-0113,963-21-4532,9257 Elm St,Salem,OR,99257,4012 8888 8888 1881,192.0.2.183,2025-06-16,4287.59,Enterprise,yes,call back
+10186,Uma Ellison,uma.ellison186@example.com,(617) 555-0124,966-10-4049,8839 Willow Ln,Fairview,TX,44385,4111 1111 1111 1111,192.0.2.81,2025-07-09,3252.56,Enterprise,no,
+10187,Jonah Hayes,jonah.hayes187@example.com,(702) 555-0155,969-42-5996,3319 Cedar St,Clinton,NY,37198,3782 822463 10005,192.0.2.167,2025-06-15,3212.87,Starter,no,
+10188,Wen Sato,wen.sato188@example.com,(202) 555-0193,940-11-9733,1118 Aspen Ln,Madison,WI,52408,4111 1111 1111 1111,192.0.2.71,2025-04-26,2083.36,Starter,no,call back
+10189,Olga Greene,olga.greene189@example.com,(202) 555-0123,955-91-3039,812 Cedar St,Riverton,WY,88156,5105 1051 0510 5100,192.0.2.47,2025-01-24,2717.51,Enterprise,yes,prefers email
+10190,Yara Jensen,yara.jensen190@example.com,(415) 555-0168,920-28-4389,8467 Oak Blvd,Clinton,NY,22482,4012 8888 8888 1881,192.0.2.201,2025-02-02,1956.39,Pro,no,
+10191,Blake Ellison,blake.ellison191@example.com,(312) 555-0157,937-39-6222,9194 Cedar Rd,Springfield,IL,43821,5555 5555 5555 4444,192.0.2.141,2025-04-05,4716.89,Starter,no,
+10192,Elliot Vance,elliot.vance192@example.com,(415) 555-0183,969-98-2533,3256 Elm Ave,Fairview,TX,34110,5105 1051 0510 5100,192.0.2.86,2025-11-13,394.74,Free,yes,prefers email
+10193,Quinn Castillo,quinn.castillo193@example.com,(917) 555-0144,902-73-2523,3295 Elm Rd,Fairview,TX,49708,3782 822463 10005,192.0.2.150,2025-09-25,259.86,Pro,yes,prefers email
+10194,Blake Tran,blake.tran194@example.com,(305) 555-0100,944-34-3493,4925 Maple Ave,Salem,OR,53664,5555 5555 5555 4444,192.0.2.116,2025-08-08,1513.69,Free,no,VIP
+10195,Olga Dunn,olga.dunn195@example.com,(305) 555-0120,976-60-8559,598 Maple St,Madison,WI,77287,3782 822463 10005,192.0.2.25,2025-07-21,3421.83,Pro,yes,call back
+10196,Yara Fischer,yara.fischer196@example.com,(312) 555-0184,911-52-1081,7878 Willow Ave,Fairview,TX,44246,4111 1111 1111 1111,192.0.2.28,2025-04-04,595.99,Free,no,
+10197,Samir Sato,samir.sato197@example.com,(503) 555-0146,925-46-7614,9107 Birch Ave,Springfield,IL,41442,6011 1111 1111 1117,192.0.2.224,2025-09-17,1046.16,Free,yes,call back
+10198,Wen Tran,wen.tran198@example.com,(415) 555-0111,996-31-3517,4338 Maple Blvd,Riverton,WY,61546,3782 822463 10005,192.0.2.133,2025-02-10,2763.02,Starter,yes,
+10199,Quinn Barnes,quinn.barnes199@example.com,(415) 555-0109,976-53-2606,685 Birch Ln,Clinton,NY,32898,5555 5555 5555 4444,192.0.2.88,2025-02-26,3747.61,Starter,yes,call back
