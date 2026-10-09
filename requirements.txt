@@ -1,0 +1,13 @@
+# Runtime dependencies for the web app; Streamlit Community Cloud installs this
+# file. Keep the pins in sync with pyproject.toml (Dependabot updates both).
+dataprofiler==0.14.0
+keras==3.15.1
+openpyxl==3.1.5
+pandas==2.3.3
+psutil==7.2.2
+scikit-learn==1.9.1
+streamlit==1.65.0
+# tensorflow-cpu is half the download on Linux x86-64 (Streamlit Cloud) and the
+# same on Windows; macOS and Linux ARM only have `tensorflow` wheels.
+tensorflow-cpu==2.21.0; (sys_platform == "linux" and platform_machine == "x86_64") or sys_platform == "win32"
+tensorflow==2.21.0; sys_platform == "darwin" or (sys_platform == "linux" and platform_machine != "x86_64")
