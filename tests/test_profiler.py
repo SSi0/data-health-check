@@ -165,7 +165,7 @@ def test_estimate_grows_with_file_size_and_format():
 
 def test_run_that_cannot_fit_is_refused(monkeypatch):
     monkeypatch.setattr(profiler, "available_memory_mb", lambda: 50.0)
-    with pytest.raises(profiler.OutOfMemoryError, match="Lite mode"):
+    with pytest.raises(profiler.OutOfMemoryError, match="smaller file"):
         profiler.profile_file(b"a,b\n1,2\n", "tiny.csv", detect_pii=False)
 
 
@@ -194,8 +194,10 @@ def test_memory_errors_become_friendly(monkeypatch):
         raise MemoryError
 
     monkeypatch.setattr(profiler, "_read_csv", explode)
-    with pytest.raises(profiler.OutOfMemoryError, match="Lite mode"):
+    with pytest.raises(profiler.OutOfMemoryError, match="even in Lite mode"):
         profiler.profile_file(b"a\n1\n", "x.csv", detect_pii=False)
+    with pytest.raises(profiler.OutOfMemoryError, match="Try Lite mode"):
+        profiler.profile_file(b"a\n1\n", "x.csv", get_labeler=lambda: None)
 
 
 # --- Full mode (TensorFlow data labeler) ---------------------------------------

@@ -165,6 +165,11 @@ OUT_OF_MEMORY_MESSAGE = (
     "sensitive data type detection), which needs much less memory, or try a "
     "smaller file."
 )
+OUT_OF_MEMORY_LITE_MESSAGE = (
+    "There wasn't enough memory to profile this file, even in Lite mode. Try a "
+    "smaller file (fewer rows or columns), or run Data Health Check on your own "
+    "computer (see the README)."
+)
 
 
 @dataclass
@@ -594,21 +599,25 @@ def profile_file(
     step = progress or (lambda fraction, message: None)
     file_format = detect_format(file_name)
     check_size(len(data))
-    check_memory(len(data), file_format, detect_pii=detect_pii)
+    try:
+        check_memory(len(data), file_format, detect_pii=detect_pii)
 
-    step(0.05, "Reading your file…")
-    tables = read_tables(data, file_format)
+        step(0.05, "Reading your file…")
+        tables = read_tables(data, file_format)
 
-    labeler = None
-    if detect_pii:
-        step(0.10, "Loading the sensitive data detection model…")
-        labeler = (get_labeler or load_labeler)()
+        labeler = None
+        if detect_pii:
+            step(0.10, "Loading the sensitive data detection model…")
+            labeler = (get_labeler or load_labeler)()
 
-    sheets = []
-    for index, (sheet_name, frame) in enumerate(tables):
-        where = f"sheet '{sheet_name}'" if sheet_name is not None else "your data"
-        step(0.15 + 0.8 * index / len(tables), f"Profiling {where}…")
-        sheets.append(profile_table(frame, sheet_name, labeler))
+        sheets = []
+        for index, (sheet_name, frame) in enumerate(tables):
+            where = f"sheet '{sheet_name}'" if sheet_name is not None else "your data"
+            step(0.15 + 0.8 * index / len(tables), f"Profiling {where}…")
+            sheets.append(profile_table(frame, sheet_name, labeler))
+    except (OutOfMemoryError, MemoryError):
+        message = OUT_OF_MEMORY_MESSAGE if detect_pii else OUT_OF_MEMORY_LITE_MESSAGE
+        raise OutOfMemoryError(message) from None
     step(1.0, "Done.")
 
     return DatasetProfile(
