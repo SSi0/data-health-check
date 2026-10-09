@@ -185,6 +185,16 @@ def test_full_mode_estimate_includes_tensorflow_until_it_is_loaded(monkeypatch):
     assert profiler.estimate_memory_mb(1 << 20, "csv", detect_pii=True) == lite
 
 
+def test_full_mode_needs_tensorflow_installed(monkeypatch):
+    monkeypatch.setattr(profiler, "pii_detection_available", lambda: False)
+    monkeypatch.setattr(profiler, "available_memory_mb", lambda: 100_000.0)
+    assert not profiler.full_mode_fits()
+    with pytest.raises(profiler.DetectionUnavailableError, match="Lite mode"):
+        profiler.profile_file(b"a\n1\n", "x.csv", detect_pii=True)
+    lite = profiler.profile_file(b"a\n1\n", "x.csv", detect_pii=False)
+    assert lite.mode == profiler.MODE_LITE
+
+
 def test_available_memory_is_positive():
     assert profiler.available_memory_mb() > 0
 

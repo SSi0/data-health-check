@@ -32,9 +32,10 @@ dependencies = [
     # DataProfiler's "ml" extra requires the full `tensorflow` distribution, so
     # the labeler's needs are listed here instead. tensorflow-cpu is about half
     # the download on Linux x86-64 and is identical on Windows; macOS and
-    # Linux ARM only have `tensorflow` wheels (CPU-only there anyway).
-    "tensorflow-cpu==2.21.0; (sys_platform == 'linux' and platform_machine == 'x86_64') or sys_platform == 'win32'",
-    "tensorflow==2.21.0; sys_platform == 'darwin' or (sys_platform == 'linux' and platform_machine != 'x86_64')",
+    # Linux ARM only have `tensorflow` wheels (CPU-only there anyway). There are
+    # no wheels for Intel Macs or Windows on ARM: those get Lite mode only.
+    "tensorflow-cpu==2.21.0; (sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and platform_machine != 'ARM64')",
+    "tensorflow==2.21.0; (sys_platform == 'darwin' and platform_machine == 'arm64') or (sys_platform == 'linux' and platform_machine == 'aarch64')",
     "keras==3.15.1",
     "scikit-learn==1.9.1",
 ]

@@ -8,6 +8,7 @@ psutil==7.2.2
 scikit-learn==1.9.1
 streamlit==1.65.0
 # tensorflow-cpu is half the download on Linux x86-64 (Streamlit Cloud) and the
-# same on Windows; macOS and Linux ARM only have `tensorflow` wheels.
-tensorflow-cpu==2.21.0; (sys_platform == "linux" and platform_machine == "x86_64") or sys_platform == "win32"
-tensorflow==2.21.0; sys_platform == "darwin" or (sys_platform == "linux" and platform_machine != "x86_64")
+# same on Windows; Apple Silicon and Linux ARM only have `tensorflow` wheels.
+# Intel Macs and Windows on ARM have none, so they run in Lite mode only.
+tensorflow-cpu==2.21.0; (sys_platform == "linux" and platform_machine == "x86_64") or (sys_platform == "win32" and platform_machine != "ARM64")
+tensorflow==2.21.0; (sys_platform == "darwin" and platform_machine == "arm64") or (sys_platform == "linux" and platform_machine == "aarch64")

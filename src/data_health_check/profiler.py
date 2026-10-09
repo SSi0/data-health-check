@@ -11,6 +11,7 @@ from __future__ import annotations
 import codecs
 import contextlib
 import csv
+import importlib.util
 import io
 import logging
 import math
@@ -158,6 +159,17 @@ class PasswordProtectedError(UnreadableFileError):
 
 class OutOfMemoryError(ProfilingError):
     pass
+
+
+class DetectionUnavailableError(ProfilingError):
+    pass
+
+
+DETECTION_UNAVAILABLE_MESSAGE = (
+    "Sensitive data detection isn't available on this computer because "
+    "TensorFlow isn't installed (it isn't made for every type of computer, "
+    "for example older Intel Macs). Use Lite mode instead."
+)
 
 
 OUT_OF_MEMORY_MESSAGE = (
@@ -526,8 +538,15 @@ def available_memory_mb() -> float:
     return available / 2**20
 
 
+def pii_detection_available() -> bool:
+    """True if TensorFlow, which the data labeler needs, is installed."""
+    return importlib.util.find_spec("tensorflow") is not None
+
+
 def full_mode_fits() -> bool:
     """True if full mode can profile a maximum-size CSV with the memory left."""
+    if not pii_detection_available():
+        return False
     needed = estimate_memory_mb(MAX_FILE_BYTES, "csv", detect_pii=True)
     return available_memory_mb() >= needed
 
@@ -599,6 +618,8 @@ def profile_file(
     step = progress or (lambda fraction, message: None)
     file_format = detect_format(file_name)
     check_size(len(data))
+    if detect_pii and not pii_detection_available():
+        raise DetectionUnavailableError(DETECTION_UNAVAILABLE_MESSAGE)
     try:
         check_memory(len(data), file_format, detect_pii=detect_pii)
 

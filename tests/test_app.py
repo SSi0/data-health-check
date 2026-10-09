@@ -132,3 +132,14 @@ def test_pii_detection_defaults_on_when_memory_allows(monkeypatch):
     app = AppTest.from_file(APP, default_timeout=TIMEOUT).run()
     assert app.toggle(key=PII_TOGGLE).value is True
     assert not app.sidebar.info
+
+
+def test_pii_toggle_is_disabled_when_tensorflow_is_missing(monkeypatch):
+    from data_health_check import profiler
+
+    monkeypatch.setattr(profiler, "pii_detection_available", lambda: False)
+    app = AppTest.from_file(APP, default_timeout=TIMEOUT).run()
+    toggle = app.toggle(key=PII_TOGGLE)
+    assert toggle.value is False
+    assert toggle.disabled
+    assert "TensorFlow isn't installed" in app.sidebar.info[0].value

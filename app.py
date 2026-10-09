@@ -49,6 +49,7 @@ def init_state() -> None:
     state = st.session_state
     state.setdefault("uploader_key", 0)
     if "pii_default" not in state:
+        state.pii_available = profiler.pii_detection_available()
         state.pii_default = profiler.full_mode_fits()
         state.memory_available_mb = profiler.available_memory_mb()
         state.memory_needed_mb = profiler.estimate_memory_mb(
@@ -65,6 +66,7 @@ def sidebar() -> tuple[bool, bool]:
         detect_pii = st.toggle(
             PII_TOGGLE,
             key=PII_TOGGLE,
+            disabled=not state.pii_available,
             help=(
                 "On (Full mode): a machine-learning model also works out what each "
                 "column contains, such as emails, phone numbers, Social Security "
@@ -79,7 +81,9 @@ def sidebar() -> tuple[bool, bool]:
             )
         else:
             st.caption("**Lite mode.** No sensitive data detection.")
-        if not state.pii_default:
+        if not state.pii_available:
+            st.info(profiler.DETECTION_UNAVAILABLE_MESSAGE, icon=":material/info:")
+        elif not state.pii_default:
             st.info(
                 "Sensitive data detection is off by default because this server "
                 f"has about {state.memory_available_mb:,.0f} MB of free memory and "
