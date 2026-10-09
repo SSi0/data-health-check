@@ -3,6 +3,7 @@
 import csv
 import io
 
+import openpyxl.worksheet._writer
 import pytest
 from openpyxl import load_workbook
 
@@ -235,3 +236,14 @@ def test_full_mode_xlsx_export_masks_sensitive_columns(xlsx_profile_full):
     assert by_name["ssn"][header.index("data_label")] == "SSN"
     assert by_name["ssn"][header.index("sample_values")] == "[masked: SSN]"
     assert "[masked" not in by_name["plan"][header.index("sample_values")]
+
+
+def test_xlsx_is_built_without_temporary_files(monkeypatch):
+    def no_temp_files(*args, **kwargs):
+        raise AssertionError("openpyxl tried to write a temporary file")
+
+    monkeypatch.setattr(
+        openpyxl.worksheet._writer, "create_temporary_file", no_temp_files
+    )
+    workbook = load(exporters.to_xlsx_bytes(make_profile("xlsx")))
+    assert workbook.sheetnames == ["Summary", "People", "Field guide"]

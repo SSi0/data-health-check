@@ -5,14 +5,19 @@ from __future__ import annotations
 import csv
 import io
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import PurePath
 from typing import Any
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+from openpyxl.drawing.spreadsheet_drawing import SpreadsheetDrawing
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet._writer import WorksheetWriter
 from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl.writer.excel import ExcelWriter
 
 from data_health_check.profiler import FIELD_GUIDE, DatasetProfile
 
@@ -156,8 +161,33 @@ def to_xlsx_bytes(profile: DatasetProfile, *, reveal_sensitive: bool = False) ->
         max_width=100,
     )
 
+    return _save_in_memory(workbook)
+
+
+class _InMemoryExcelWriter(ExcelWriter):
+    """openpyxl's ExcelWriter, with worksheets built in memory.
+
+    The stock writer serialises every worksheet to a temporary file on disk
+    first. Profiles contain column names and sample values, so they stay in
+    memory instead. Mirrors ``ExcelWriter.write_worksheet`` (openpyxl 3.1).
+    """
+
+    def write_worksheet(self, ws: Worksheet) -> None:
+        ws._drawing = SpreadsheetDrawing()
+        ws._drawing.charts = ws._charts
+        ws._drawing.images = ws._images
+        writer = WorksheetWriter(ws, out=io.BytesIO())
+        writer.write()
+        ws._rels = writer._rels
+        self._archive.writestr(ws.path[1:], writer.read())
+        self.manifest.append(ws)
+
+
+def _save_in_memory(workbook: Workbook) -> bytes:
     buffer = io.BytesIO()
-    workbook.save(buffer)
+    workbook.properties.modified = datetime.now(UTC).replace(tzinfo=None)
+    with ZipFile(buffer, "w", ZIP_DEFLATED, allowZip64=True) as archive:
+        _InMemoryExcelWriter(workbook, archive).save()
     return buffer.getvalue()
 
 
