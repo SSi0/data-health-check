@@ -291,7 +291,7 @@ def test_export_refuses_a_link_to_the_input(workdir):
             output_path=output,
             detect_pii=False,
         )
-        assert "can't be the input file" in error_text(result)
+        assert "would overwrite the input file" in error_text(result)
     assert source.read_bytes() == CUSTOMERS_CSV.read_bytes()
 
 
@@ -337,7 +337,7 @@ def test_failed_write_keeps_the_earlier_profile(workdir, monkeypatch):
     ("output_path", "message"),
     [
         ("profile.xlsx", "must end in .csv"),
-        ("customers.csv", "can't be the input file"),
+        ("customers.csv", "would overwrite the input file"),
         ("missing/profile.csv", "doesn't exist"),
         ("important.csv", "won't be overwritten"),
     ],
@@ -532,3 +532,114 @@ def test_full_mode_masks_min_max_of_numeric_ssns(tmp_path):
     assert by_name["quantity"]["max"] == 12
     for raw in ("900000000", "2025550100", "4111111111111111"):
         assert raw not in result.content[0].text
+
+
+# --- export_profile: the target is checked again right before writing --------
+
+
+def export_lite(source: Path, **arguments):
+    return call("export_profile", file_path=str(source), detect_pii=False, **arguments)
+
+
+@posix_only
+def test_a_fifo_at_the_target_is_refused_without_hanging(workdir):
+    os.mkfifo(workdir / "customers_profile.csv")
+    assert "won't be overwritten" in error_text(export_lite(workdir / "customers.csv"))
+
+
+def test_an_annotated_workbook_profile_is_kept(workdir):
+    source = workdir / "company_data.xlsx"
+    profile_path = exported(export_lite(source))
+    workbook = load_workbook(profile_path)
+    workbook.create_sheet("My notes", 1)["A1"] = "call the vendor"
+    workbook.save(profile_path)
+    before = profile_path.read_bytes()
+    assert "won't be overwritten" in error_text(export_lite(source))
+    assert profile_path.read_bytes() == before
+
+
+def test_a_profile_resaved_with_semicolons_is_still_recognised(workdir):
+    source = workdir / "customers.csv"
+    profile_path = exported(export_lite(source))
+    text = profile_path.read_text(encoding="utf-8-sig").replace(",", ";")
+    profile_path.write_text(text, encoding="utf-8")
+    assert exported(export_lite(source)) == profile_path
+    assert profile_path.read_text(encoding="utf-8-sig").startswith("column_name,")
+
+
+def test_a_file_that_appears_while_profiling_is_left_alone(workdir, monkeypatch):
+    target = workdir / "customers_profile.csv"
+    real_profile = mcp_server._profile
+
+    def slow_profile(*args):
+        target.write_text("saved by the user meanwhile")
+        return real_profile(*args)
+
+    monkeypatch.setattr(mcp_server, "_profile", slow_profile)
+    message = error_text(export_lite(workdir / "customers.csv"))
+    assert "while the profile was being made" in message
+    assert target.read_text() == "saved by the user meanwhile"
+
+
+def test_an_earlier_profile_changed_while_profiling_is_kept(workdir, monkeypatch):
+    source = workdir / "customers.csv"
+    target = exported(export_lite(source))
+    real_profile = mcp_server._profile
+
+    def slow_profile(*args):
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write("my,own,notes\n")
+        return real_profile(*args)
+
+    monkeypatch.setattr(mcp_server, "_profile", slow_profile)
+    assert "while the profile was being made" in error_text(export_lite(source))
+    assert target.read_text(encoding="utf-8-sig").endswith("my,own,notes\n")
+    assert not list(workdir.glob(".dhc-*"))
+
+
+@posix_only
+def test_permissions_follow_umask_and_are_kept_on_replace(workdir):
+    source = workdir / "customers.csv"
+    umask = os.umask(0)
+    os.umask(umask)
+    target = exported(export_lite(source))
+    assert target.stat().st_mode & 0o777 == 0o666 & ~umask
+    target.chmod(0o640)
+    exported(export_lite(source))
+    assert target.stat().st_mode & 0o777 == 0o640
+
+
+@posix_only
+def test_a_read_only_earlier_profile_is_not_replaced(workdir):
+    source = workdir / "customers.csv"
+    target = exported(export_lite(source))
+    target.chmod(0o444)
+    assert "read-only" in error_text(export_lite(source))
+
+
+def test_long_profile_names_can_be_replaced(workdir):
+    name = "q" * (250 - len(".csv")) + ".csv"
+    source = workdir / "customers.csv"
+    first = exported(export_lite(source, output_path=name))
+    assert exported(export_lite(source, output_path=name)) == first
+
+
+@posix_only
+def test_link_loops_dangling_links_and_other_targets_are_explained(workdir):
+    source = workdir / "customers.csv"
+    loop = workdir / "customers_profile.csv"
+    loop.symlink_to(loop)
+    assert "points back to itself" in error_text(export_lite(source))
+    loop.unlink()
+    loop.symlink_to(workdir / "elsewhere" / "missing.csv")
+    assert "doesn't exist, so nothing was written" in error_text(export_lite(source))
+    loop.unlink()
+    (workdir / "notes.txt").write_text("keep me")
+    loop.symlink_to(workdir / "notes.txt")
+    assert "isn't a .csv file" in error_text(export_lite(source))
+    assert (workdir / "notes.txt").read_text() == "keep me"
+
+
+def test_nul_characters_in_paths_are_explained():
+    message = error_text(call("profile_dataset", file_path="/tmp/bad\x00name.csv"))
+    assert "isn't allowed" in message

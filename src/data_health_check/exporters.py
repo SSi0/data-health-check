@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import io
+import re
+import stat
 import warnings
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -33,6 +35,7 @@ XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sh
 CREATOR = "Data Health Check"
 SUMMARY_SHEET = "Summary"
 FIELD_GUIDE_SHEET = "Field guide"
+FIELD_GUIDE_HEADERS = ("Field", "What it means")
 SUMMARY_HEADERS = (
     "File name",
     "Sheet name",
@@ -66,43 +69,81 @@ def output_file_name(input_name: str) -> str:
 
 
 def is_profile_file(path: Path) -> bool:
-    """True if ``path`` holds a profile written by this tool.
+    """True if ``path`` holds a profile written by this tool, unchanged in shape.
 
-    Judged by content, not by name: a CSV whose header row is exactly the
-    profile header, or a workbook made by Data Health Check whose sheets run
-    from Summary to Field guide. Used to decide whether a file may be replaced.
+    Judged by content, not by name, and used to decide whether a file may be
+    replaced: a CSV whose header row is exactly a profile header (also when
+    re-saved with ";" or tab separators), or a workbook made by Data Health
+    Check whose sheets are Summary, profile sheets and Field guide, each with
+    its own header. A workbook someone added a sheet or a column to doesn't
+    qualify, so their additions are never thrown away. Never blocks: special
+    files (FIFOs, devices) and oversized files are rejected without reading.
     """
-    suffix = path.suffix.lower()
     try:
+        info = path.stat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size > _MAX_PROFILE_BYTES:
+            return False
+        suffix = path.suffix.lower()
         if suffix == ".csv":
-            with path.open("rb") as handle:
-                header = handle.readline(4096).decode("utf-8-sig").strip()
-            return header in _CSV_HEADERS
+            return _is_profile_csv(path)
         if suffix == ".xlsx":
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                workbook = load_workbook(path, read_only=True)
-            try:
-                names = workbook.sheetnames
-                return (
-                    workbook.properties.creator == CREATOR
-                    and len(names) >= 2
-                    and names[0] == SUMMARY_SHEET
-                    and names[-1] == FIELD_GUIDE_SHEET
-                )
-            finally:
-                workbook.close()
+            return _is_profile_workbook(path)
     except Exception:  # unreadable, not a zip, not text: not one of ours
         return False
     return False
 
 
-_CSV_HEADERS = frozenset(
+# Profiles are small (one row per input column); anything bigger isn't one.
+_MAX_PROFILE_BYTES = 10 * 1024 * 1024
+_MAX_UNPACKED_BYTES = 50 * 1024 * 1024
+_PROFILE_HEADERS = frozenset(
     {
-        ",".join(COLUMN_FIELDS),
-        ",".join(name for name in COLUMN_FIELDS if name not in LABEL_FIELDS),
+        COLUMN_FIELDS,
+        tuple(name for name in COLUMN_FIELDS if name not in LABEL_FIELDS),
     }
 )
+
+
+def _is_profile_csv(path: Path) -> bool:
+    with path.open("rb") as handle:
+        header = handle.readline(4096).decode("utf-8-sig").strip()
+    return tuple(re.split(r"[,;\t]", header)) in _PROFILE_HEADERS
+
+
+def _is_profile_workbook(path: Path) -> bool:
+    with ZipFile(path) as archive:
+        # Cheap checks first: the creator, and no part that would be costly to
+        # parse (guards against huge or crafted workbooks at the target).
+        if sum(item.file_size for item in archive.infolist()) > _MAX_UNPACKED_BYTES:
+            return False
+        core = archive.read("docProps/core.xml")
+    if f"<dc:creator>{CREATOR}</dc:creator>".encode() not in core:
+        return False
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        workbook = load_workbook(path, read_only=True)
+    try:
+        names = workbook.sheetnames
+        if (
+            len(names) < 2
+            or names[0] != SUMMARY_SHEET
+            or names[-1] != FIELD_GUIDE_SHEET
+        ):
+            return False
+        if _first_row(workbook[SUMMARY_SHEET]) != SUMMARY_HEADERS:
+            return False
+        if _first_row(workbook[FIELD_GUIDE_SHEET]) != FIELD_GUIDE_HEADERS:
+            return False
+        return all(
+            _first_row(workbook[name]) in _PROFILE_HEADERS for name in names[1:-1]
+        )
+    finally:
+        workbook.close()
+
+
+def _first_row(sheet: Any) -> tuple[str, ...]:
+    row = next(sheet.iter_rows(min_row=1, max_row=1, values_only=True), ())
+    return tuple("" if value is None else str(value) for value in row)
 
 
 def export_profile(
@@ -202,7 +243,7 @@ def to_xlsx_bytes(profile: DatasetProfile, *, reveal_sensitive: bool = False) ->
     guide = workbook.create_sheet(FIELD_GUIDE_SHEET)
     _write_table(
         guide,
-        ("Field", "What it means"),
+        FIELD_GUIDE_HEADERS,
         [(name, FIELD_GUIDE[name]) for name in fields],
         wrap_columns=(2,),
         max_width=100,

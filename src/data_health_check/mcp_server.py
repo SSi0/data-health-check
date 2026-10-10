@@ -15,12 +15,15 @@ labeler identifies as sensitive and hidden in Lite mode (``detect_pii=false``).
 from __future__ import annotations
 
 import contextlib
+import errno
 import functools
 import logging
 import os
+import stat
 import tempfile
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, TypeVar
 
@@ -221,8 +224,8 @@ def export_profile(
         given, real = _input_path(file_path)
         target = _output_path(given, real, output_path)
         exported = exporters.export_profile(_profile(given, real, detect_pii))
-        _write_atomically(target, exported.data)
-        return str(target)
+        _write_profile(target, exported.data)
+        return str(target.path)
 
     return _run(run)
 
@@ -269,6 +272,8 @@ def _profile(given: Path, real: Path, detect_pii: bool) -> profiler.DatasetProfi
 
 def _absolute(path_text: str, base: Path | None = None) -> Path:
     """Expand "~" and make ``path_text`` absolute without following links."""
+    if "\x00" in path_text:
+        raise ToolError("The path contains a character that isn't allowed (NUL).")
     try:
         path = Path(path_text).expanduser()
     except RuntimeError:  # "~someone" with no such user, or no home folder
@@ -278,6 +283,18 @@ def _absolute(path_text: str, base: Path | None = None) -> Path:
     if not path.is_absolute():
         path = (base or Path.cwd()) / path
     return Path(os.path.normpath(path))
+
+
+def _resolve(path: Path) -> Path:
+    """Follow links; a link loop gets a clear message instead of a crash."""
+    try:
+        return path.resolve()
+    except RuntimeError:  # Python 3.12 raises this for a symlink loop
+        raise ToolError(f"{path} is a link that points back to itself.") from None
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise ToolError(f"{path} is a link that points back to itself.") from None
+        raise
 
 
 def _input_path(file_path: str) -> tuple[Path, Path]:
@@ -292,7 +309,7 @@ def _input_path(file_path: str) -> tuple[Path, Path]:
             f"Only .csv and .xlsx files are supported, and '{given.name}' is "
             "neither. Ask the user to save it as CSV or Excel Workbook (.xlsx)."
         )
-    real = given.resolve()
+    real = _resolve(given)
     if not real.exists():
         raise ToolError(f"File not found: {given}")
     if not real.is_file():
@@ -300,55 +317,117 @@ def _input_path(file_path: str) -> tuple[Path, Path]:
     return given, real
 
 
-def _output_path(given: Path, real: Path, output_path: str | None) -> Path:
+@dataclass(frozen=True)
+class _Target:
+    """Where a profile will be written, as checked before profiling."""
+
+    path: Path  # the resolved file to write
+    shown: Path  # the location as requested, for messages
+    earlier: tuple[int, ...] | None  # signature of the earlier profile, if any
+
+
+def _signature(path: Path) -> tuple[int, ...] | None:
+    try:
+        info = path.stat()
+    except FileNotFoundError:
+        return None
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+
+
+def _output_path(given: Path, real: Path, output_path: str | None) -> _Target:
     suffix = given.suffix.lower()
     default_name = exporters.output_file_name(given.name)
     if output_path is None:
-        target = given.parent / default_name
+        shown = given.parent / default_name
     else:
-        target = _absolute(output_path, base=given.parent)
-        if target.is_dir():
-            target = target / default_name
-        elif target.suffix.lower() != suffix:
+        shown = _absolute(output_path, base=given.parent)
+        if shown.is_dir():
+            shown = shown / default_name
+        elif shown.suffix.lower() != suffix:
             raise ToolError(
                 f"output_path must end in {suffix}, the same format as the input "
                 "file (or be an existing folder)."
             )
     # Follow links, so the checks below apply to the file that would be written.
-    target = target.resolve()
+    target = _resolve(shown)
+    if shown.is_symlink() and not target.exists():
+        raise ToolError(
+            f"{shown} is a link to {target}, which doesn't exist, so nothing was "
+            "written. Remove the link or choose another output_path."
+        )
+    if target.suffix.lower() != suffix:
+        raise ToolError(
+            f"{shown} is a link to {target}, which isn't a {suffix} file, so it "
+            "won't be written. Choose another output_path."
+        )
     if target == real or (target.exists() and os.path.samefile(target, real)):
-        raise ToolError("output_path can't be the input file itself.")
+        raise ToolError(
+            f"The profile would overwrite the input file ({shown}). Choose another "
+            "output_path."
+        )
     if target.is_dir():
-        raise ToolError(f"{target} is a folder. Choose a file name for the profile.")
+        raise ToolError(f"{shown} is a folder. Choose a file name for the profile.")
     if not target.parent.is_dir():
         raise ToolError(f"The folder {target.parent} doesn't exist.")
-    if target.exists() and not exporters.is_profile_file(target):
+    if not target.exists():
+        return _Target(target, shown, None)
+    if not exporters.is_profile_file(target):
         raise ToolError(
-            f"{target} already exists and isn't a profile made by Data Health "
-            "Check, so it won't be overwritten. Choose another output_path."
+            f"{shown} already exists and isn't a profile made by Data Health Check "
+            "(or it has been changed, e.g. a sheet was added), so it won't be "
+            "overwritten. Choose another output_path."
         )
-    return target
+    if not target.stat().st_mode & stat.S_IWUSR:
+        raise ToolError(f"{shown} is read-only, so it won't be overwritten.")
+    return _Target(target, shown, _signature(target))
 
 
-def _write_atomically(target: Path, data: bytes) -> None:
-    """Write ``data`` to a temporary file next to ``target``, then swap it in.
+def _write_profile(target: _Target, data: bytes) -> None:
+    """Write the profile without ever clobbering a file it shouldn't.
 
-    A failed write (for example a full disk) leaves any earlier file intact
-    instead of a truncated one.
+    A new profile is created exclusively: if a file appeared at that name while
+    the profile was being made, it is left alone. An earlier profile is
+    replaced through a temporary file and ``os.replace``, so a failed write
+    (e.g. a full disk) leaves it intact; if it changed meanwhile, it is kept.
     """
-    handle, temporary = tempfile.mkstemp(
-        dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
-    )
+    if target.earlier is None:
+        try:
+            handle = os.open(target.path, _NEW_FILE_FLAGS, 0o666)  # honours umask
+        except FileExistsError:
+            raise ToolError(_CHANGED_MEANWHILE.format(target.shown)) from None
+        try:
+            _write_all(handle, data)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.unlink(target.path)
+            raise
+        return
+
+    handle, temporary = tempfile.mkstemp(dir=target.path.parent, prefix=".dhc-")
     try:
-        with os.fdopen(handle, "wb") as stream:
-            stream.write(data)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, target)
+        _write_all(handle, data)
+        if _signature(target.path) != target.earlier:
+            raise ToolError(_CHANGED_MEANWHILE.format(target.shown))
+        os.chmod(temporary, stat.S_IMODE(target.path.stat().st_mode))
+        os.replace(temporary, target.path)
     except BaseException:
         with contextlib.suppress(OSError):
             os.unlink(temporary)
         raise
+
+
+_NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+_CHANGED_MEANWHILE = (
+    "{} was created or changed while the profile was being made, so it was left "
+    "untouched. Run export_profile again, or choose another output_path."
+)
+
+
+def _write_all(handle: int, data: bytes) -> None:
+    with os.fdopen(handle, "wb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
 
 
 def main() -> None:
