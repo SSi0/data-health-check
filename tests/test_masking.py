@@ -78,6 +78,7 @@ def numeric_column(**overrides):
         "median": 950000000.5,
         "mean": 949000000.0,
         "stddev": 1000.0,
+        "unique_count": 150,
         "sample_values": ["901112222", "902223333"],
     }
     column.update(overrides)
@@ -88,11 +89,11 @@ def test_sensitive_number_columns_mask_values_copied_from_the_data():
     protected = masking.protect_column(
         numeric_column(data_label="SSN"), labels_checked=True
     )
-    for key in ("min", "max", "median"):
+    # Every number statistic: with one or two distinct values even the mean
+    # and stddev give the values away, and they mean nothing for IDs.
+    for key in ("min", "max", "median", "mean", "stddev"):
         assert protected[key] == "[masked: SSN]"
     assert protected["sample_values"] == ["[masked: SSN]"]
-    assert protected["mean"] == 949000000.0  # aggregates are kept
-    assert protected["stddev"] == 1000.0
 
 
 def test_safe_columns_are_unchanged():
@@ -121,3 +122,19 @@ def test_protect_column_does_not_modify_its_input():
     column = numeric_column(data_label="SSN")
     masking.protect_column(column, labels_checked=True)
     assert column["min"] == 900112222
+
+
+@pytest.mark.parametrize(
+    ("unique_count", "hidden"), [(1, True), (2, True), (None, True), (3, False)]
+)
+def test_lite_mode_hides_averages_of_columns_with_few_distinct_values(
+    unique_count, hidden
+):
+    # A constant column's mean is its value; two values follow from mean ± sd.
+    lite = masking.protect_column(
+        numeric_column(unique_count=unique_count), labels_checked=False
+    )
+    expected = "[hidden: Lite mode]" if hidden else (949000000.0, 1000.0)
+    assert (lite["mean"], lite["stddev"]) == (
+        (expected, expected) if hidden else expected
+    )

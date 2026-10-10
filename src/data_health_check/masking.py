@@ -2,17 +2,19 @@
 
 Shared by the web app and the MCP server so both apply exactly the same rules.
 "Values copied from the data" are the sample values and the statistics that
-can equal a single real value (min, max and median of number columns):
+can give a real value away:
 
-* in a column whose DataProfiler ``data_label`` names a sensitive type, they
-  are replaced by ``[masked: <LABEL>]``;
+* in a column whose DataProfiler ``data_label`` names a sensitive type, the
+  samples and every number statistic (min, max, median, mean, stddev) are
+  replaced by ``[masked: <LABEL>]``: averages of SSNs or card numbers mean
+  nothing, and with one or two distinct values they reveal them;
 * in Lite mode no labels exist, so no column can be shown to be safe: every
   sample, and min/max/median of every number column, is replaced by
-  ``[hidden: Lite mode]``.
+  ``[hidden: Lite mode]``, and so are mean and stddev when a number column
+  has two distinct values or fewer.
 
-Mean and standard deviation are aggregates and are kept. Detection is only as
-good as DataProfiler's labeler: a column it doesn't recognise (for example
-names labelled UNKNOWN) is not masked.
+Detection is only as good as DataProfiler's labeler: a column it doesn't
+recognise (for example names labelled UNKNOWN) is not masked.
 """
 
 from __future__ import annotations
@@ -23,6 +25,9 @@ LITE_MODE_PLACEHOLDER = "[hidden: Lite mode]"
 
 # Statistics that can be equal to one real value in the column.
 VALUE_STATISTICS: tuple[str, ...] = ("min", "max", "median")
+# Aggregates: they give values away only when there are very few distinct ones.
+AGGREGATE_STATISTICS: tuple[str, ...] = ("mean", "stddev")
+FEW_DISTINCT_VALUES = 2
 NUMBER_TYPES = frozenset({"int", "float"})
 
 SENSITIVE_LABELS: frozenset[str] = frozenset(
@@ -93,15 +98,20 @@ def protect_column(column: dict[str, Any], *, labels_checked: bool) -> dict[str,
     protected["sample_values"] = mask_samples(
         column.get("sample_values") or [], label, labels_checked=labels_checked
     )
-    if not labels_checked:
+    if labels_checked:
+        if not is_sensitive(label):
+            return protected
+        placeholder = mask_placeholder(label)
+        keys = VALUE_STATISTICS + AGGREGATE_STATISTICS
+    else:
         if column.get("data_type") not in NUMBER_TYPES:
             return protected  # date min/max are not on the sensitive list
         placeholder = LITE_MODE_PLACEHOLDER
-    elif is_sensitive(label):
-        placeholder = mask_placeholder(label)
-    else:
-        return protected
-    for key in VALUE_STATISTICS:
+        keys = VALUE_STATISTICS
+        unique_count = column.get("unique_count")
+        if unique_count is None or unique_count <= FEW_DISTINCT_VALUES:
+            keys += AGGREGATE_STATISTICS
+    for key in keys:
         if protected.get(key) is not None:
             protected[key] = placeholder
     return protected

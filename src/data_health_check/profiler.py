@@ -32,6 +32,29 @@ from data_health_check import masking
 # Silence TensorFlow's C++ start-up messages; only effective before TF loads.
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 
+# Library warnings can quote cell values (openpyxl: "serial value 968226991 is
+# outside the limits for dates"). warnings.catch_warnings() is not thread-safe,
+# so with two files profiled at once one run could restore the other's filters
+# mid-read; these filters are therefore kept for the whole process.
+_QUIET_MODULES = (r"openpyxl(\..*)?", r"dataprofiler(\..*)?", r"pandas(\..*)?")
+
+
+def quiet_library_warnings() -> None:
+    """Ignore warnings from the file-reading libraries, process-wide.
+
+    Idempotent. Called at import and before every run, because a host may
+    reset the warning filters (pytest does after collecting tests). Once in
+    place, a later ``catch_warnings()`` block saves and restores them too.
+    """
+    # A filter's module is a compiled pattern, a plain string or None.
+    present = {(f[0], getattr(f[3], "pattern", f[3])) for f in warnings.filters}
+    for module in _QUIET_MODULES:
+        if ("ignore", module) not in present:
+            warnings.filterwarnings("ignore", module=module)
+
+
+quiet_library_warnings()
+
 MAX_FILE_MB = 25
 MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
 SUPPORTED_EXTENSIONS = (".csv", ".xlsx")
@@ -98,7 +121,11 @@ FIELD_GUIDE: dict[str, str] = {
     "max": (
         "The largest value. Number and date columns only. Masked and hidden like min."
     ),
-    "mean": "The average. Number columns only.",
+    "mean": (
+        "The average. Number columns only. Masked in sensitive columns, and "
+        "hidden in Lite mode when a column has two different values or fewer, "
+        "because then it would give the values away."
+    ),
     "median": (
         "The middle value: half the values are below it. Number columns only; "
         "DataProfiler estimates it, so it can be slightly approximate. Masked and "
@@ -106,7 +133,7 @@ FIELD_GUIDE: dict[str, str] = {
     ),
     "stddev": (
         "Standard deviation: how spread out the numbers are around the average. "
-        "Number columns only."
+        "Number columns only. Masked and hidden like mean."
     ),
     "sample_values": (
         "Up to 5 example values, separated by '; '. In columns detected as "
@@ -632,6 +659,7 @@ def profile_file(
     :param progress: optional ``callback(fraction, message)`` for progress.
     :raises ProfilingError: with a user-friendly message for bad input.
     """
+    quiet_library_warnings()
     step = progress or (lambda fraction, message: None)
     file_format = detect_format(file_name)
     check_size(len(data))

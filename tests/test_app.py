@@ -9,7 +9,7 @@ from conftest import COMPANY_XLSX, CUSTOMERS_CSV, PASSWORD_XLSX
 
 APP = str(Path(__file__).parents[1] / "app.py")
 PII_TOGGLE = "Detect sensitive data types (PII)"
-REVEAL_TOGGLE = "Show sensitive sample values"
+REVEAL_TOGGLE = "Show sensitive values"
 TIMEOUT = 120
 
 

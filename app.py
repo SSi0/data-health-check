@@ -36,7 +36,7 @@ GENERIC_ERROR = (
     "detection in the sidebar)."
 )
 PII_TOGGLE = "Detect sensitive data types (PII)"
-REVEAL_TOGGLE = "Show sensitive sample values"
+REVEAL_TOGGLE = "Show sensitive values"
 
 
 @st.cache_resource(show_spinner=False)
@@ -98,10 +98,12 @@ def sidebar() -> tuple[bool, bool]:
             REVEAL_TOGGLE,
             key=REVEAL_TOGGLE,
             help=(
-                "Off: example values in columns detected as sensitive are replaced "
-                "by [masked: LABEL], and in Lite mode (which can't detect them) all "
-                "example values are hidden, on screen and in the download. Turn on "
-                "only if you need to see them."
+                "Off: in columns detected as sensitive, example values and the "
+                "statistics that can give values away (min, max, median, mean, "
+                "stddev) are replaced by [masked: LABEL]. Lite mode can't detect "
+                "sensitive columns, so there all example values, and min/max/median "
+                "of number columns, are hidden. This applies on screen and in the "
+                "download. Turn on only if you need to see them."
             ),
         )
     return detect_pii, reveal
@@ -180,8 +182,9 @@ def display_frame(
         profile.column_rows(sheet, reveal_sensitive=reveal),
         columns=list(profile.column_fields()),
     )
-    # min/max hold numbers for number columns and text for dates.
-    for name in ("min", "max"):
+    # Statistics columns can mix numbers with text (dates, or placeholders such
+    # as "[masked: SSN]"); show such a column as text so it renders cleanly.
+    for name in ("min", "max", "median", "mean", "stddev"):
         if frame[name].map(lambda v: isinstance(v, str)).any():
             frame[name] = frame[name].map(lambda v: "" if v is None else str(v))
     return frame
@@ -220,10 +223,11 @@ def show_results(
     )
     if not reveal:
         hidden = (
-            "Example values in columns detected as sensitive are masked"
+            "In columns detected as sensitive, example values and statistics "
+            "that could give values away are masked"
             if profile.detect_pii
-            else "Example values are hidden in Lite mode, because it can't tell "
-            "which columns are sensitive"
+            else "Example values, and min/max/median of number columns, are "
+            "hidden in Lite mode, because it can't tell which columns are sensitive"
         )
         st.caption(
             f"{hidden}, on screen and in the download. To show them, use "

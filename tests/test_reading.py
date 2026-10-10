@@ -176,3 +176,20 @@ def test_reader_warnings_that_quote_cell_values_are_not_printed(capfd):
         profile_lite(workbook_bytes(build), "dates.xlsx")
     assert not any("968226991" in str(w.message) for w in caught)
     assert "968226991" not in capfd.readouterr().err
+
+
+def test_value_quoting_library_warnings_are_ignored_process_wide():
+    # catch_warnings() isn't thread-safe, so a second profile running at the
+    # same time can't rely on it: the filter must hold outside it as well.
+    from openpyxl import load_workbook
+
+    def build(wb):
+        wb.active.append(["joined"])
+        wb.active.append([968226991])
+        wb.active["A2"].number_format = "yyyy-mm-dd"
+
+    profile_lite(b"a\n1\n", "tiny.csv")  # any run (re)installs the filters
+    with warnings.catch_warnings(record=True) as caught:  # keeps current filters
+        workbook = load_workbook(io.BytesIO(workbook_bytes(build)))
+        _ = [cell.value for row in workbook.active for cell in row]
+    assert not [w for w in caught if "968226991" in str(w.message)]
