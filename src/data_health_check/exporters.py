@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import csv
 import io
+import warnings
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.drawing.spreadsheet_drawing import SpreadsheetDrawing
 from openpyxl.styles import Alignment, Font
@@ -19,11 +20,17 @@ from openpyxl.worksheet._writer import WorksheetWriter
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.writer.excel import ExcelWriter
 
-from data_health_check.profiler import FIELD_GUIDE, DatasetProfile
+from data_health_check.profiler import (
+    COLUMN_FIELDS,
+    FIELD_GUIDE,
+    LABEL_FIELDS,
+    DatasetProfile,
+)
 
 CSV_MIME_TYPE = "text/csv"
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
+CREATOR = "Data Health Check"
 SUMMARY_SHEET = "Summary"
 FIELD_GUIDE_SHEET = "Field guide"
 SUMMARY_HEADERS = (
@@ -56,6 +63,46 @@ def output_file_name(input_name: str) -> str:
     """``customers.xlsx`` -> ``customers_profile.xlsx``."""
     path = PurePath(input_name)
     return f"{path.stem}_profile{path.suffix.lower()}"
+
+
+def is_profile_file(path: Path) -> bool:
+    """True if ``path`` holds a profile written by this tool.
+
+    Judged by content, not by name: a CSV whose header row is exactly the
+    profile header, or a workbook made by Data Health Check whose sheets run
+    from Summary to Field guide. Used to decide whether a file may be replaced.
+    """
+    suffix = path.suffix.lower()
+    try:
+        if suffix == ".csv":
+            with path.open("rb") as handle:
+                header = handle.readline(4096).decode("utf-8-sig").strip()
+            return header in _CSV_HEADERS
+        if suffix == ".xlsx":
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                workbook = load_workbook(path, read_only=True)
+            try:
+                names = workbook.sheetnames
+                return (
+                    workbook.properties.creator == CREATOR
+                    and len(names) >= 2
+                    and names[0] == SUMMARY_SHEET
+                    and names[-1] == FIELD_GUIDE_SHEET
+                )
+            finally:
+                workbook.close()
+    except Exception:  # unreadable, not a zip, not text: not one of ours
+        return False
+    return False
+
+
+_CSV_HEADERS = frozenset(
+    {
+        ",".join(COLUMN_FIELDS),
+        ",".join(name for name in COLUMN_FIELDS if name not in LABEL_FIELDS),
+    }
+)
 
 
 def export_profile(
@@ -119,7 +166,7 @@ def _is_numeric_text(value: str) -> bool:
 def to_xlsx_bytes(profile: DatasetProfile, *, reveal_sensitive: bool = False) -> bytes:
     """Summary sheet, one profile sheet per input sheet, and a Field guide."""
     workbook = Workbook()
-    workbook.properties.creator = "Data Health Check"
+    workbook.properties.creator = CREATOR
 
     summary = workbook.active
     summary.title = SUMMARY_SHEET

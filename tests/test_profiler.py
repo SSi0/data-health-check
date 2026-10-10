@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from conftest import CUSTOMERS_CSV, columns_by_name
+from conftest import CUSTOMERS_CSV, columns_by_name, digits_only_ids_csv
 from data_health_check import masking, profiler
 from fixtures.generate_fixtures import customer_rows
 
@@ -260,17 +260,6 @@ def test_full_mode_xlsx(xlsx_profile_full):
     customers, orders = xlsx_profile_full.sheets
     assert columns_by_name(customers)["ssn"]["data_label"] == "SSN"
     assert columns_by_name(orders)["contact_email"]["data_label"] == "EMAIL_ADDRESS"
-
-
-def digits_only_ids_csv() -> bytes:
-    """Fake SSNs, phones and cards stored as plain digits (typed as numbers)."""
-    lines = ["ssn,phone,card,quantity"]
-    for i in range(200):
-        lines.append(
-            f"{900000000 + i * 4999},{2025550100 + i % 100},"
-            f"{4111111111111111 + i * 2},{i % 12 + 1}"
-        )
-    return ("\n".join(lines) + "\n").encode()
 
 
 def test_lite_mode_hides_min_max_median_of_number_columns():

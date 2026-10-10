@@ -5,6 +5,7 @@ import csv
 import io
 import json
 import logging
+import os
 import re
 import shutil
 import sys
@@ -12,12 +13,17 @@ from pathlib import Path
 
 import pytest
 from mcp import Client, StdioServerParameters
+from mcp.client.stdio import get_default_environment
 from openpyxl import load_workbook
 
-from conftest import COMPANY_XLSX, CUSTOMERS_CSV, PASSWORD_XLSX
+import data_health_check
+from conftest import COMPANY_XLSX, CUSTOMERS_CSV, PASSWORD_XLSX, digits_only_ids_csv
 from data_health_check import masking, mcp_server, profiler
 
 SAMPLE_FILES = [CUSTOMERS_CSV, COMPANY_XLSX]
+# (row_count, column_count, sheet_count) of the sample files.
+SUMMARIES = {".csv": (200, 16, 1), ".xlsx": (400, 25, 2)}
+posix_only = pytest.mark.skipif(os.name == "nt", reason="needs POSIX links")
 # Raw values that must never reach an agent from the sample files.
 RAW_SENSITIVE = [
     re.compile(r"@example\.(com|org)"),  # emails
@@ -87,6 +93,12 @@ def test_tools_are_listed_with_agent_facing_descriptions():
     assert props["detect_pii"]["default"] is True
     assert "[masked: <LABEL>]" in export.description
     assert export.annotations.read_only_hint is False
+    assert export.annotations.destructive_hint is True  # replaces earlier profiles
+
+    # The agent is told what is guaranteed, not that nothing can leak.
+    for text in (profile.description, mcp_server.INSTRUCTIONS):
+        assert "never returned" not in text
+        assert "can miss" in text
 
 
 # --- profile_dataset ------------------------------------------------------------
@@ -97,8 +109,10 @@ def test_lite_profile_is_valid_json(path):
     data = ok_json(call("profile_dataset", file_path=str(path), detect_pii=False))
     assert data["file_name"] == path.name
     assert data["mode"] == "lite"
-    assert data["sheet_count"] == (1 if path.suffix == ".csv" else 2)
-    assert data["row_count"] == sum(s["row_count"] for s in data["sheets"])
+    summary = (data["row_count"], data["column_count"], data["sheet_count"])
+    assert summary == SUMMARIES[path.suffix]
+    for sheet in data["sheets"]:
+        assert sheet["column_count"] == len(sheet["columns"])
     for column in columns(data):
         assert {"column_name", "data_type", "null_count", "unique_count"} <= set(column)
         assert "data_label" not in column
@@ -222,16 +236,101 @@ def test_export_to_a_folder_or_relative_path(workdir):
     assert relative == workdir / "reports" / "q3.csv"
 
 
-def test_export_replaces_a_previous_profile(workdir):
-    target = workdir / "customers_profile.csv"
-    target.write_text("old")
-    out = exported(
-        call(
-            "export_profile", file_path=str(workdir / "customers.csv"), detect_pii=False
+def test_export_replaces_an_earlier_profile(workdir):
+    source = str(workdir / "customers.csv")
+    first = exported(call("export_profile", file_path=source, detect_pii=False))
+    first.write_text(first.read_text(encoding="utf-8-sig") + "edited,later\n")
+    again = exported(call("export_profile", file_path=source, detect_pii=False))
+    assert again == first
+    assert "edited,later" not in again.read_text(encoding="utf-8-sig")
+
+
+def test_export_can_rerun_with_a_custom_name(workdir):
+    source = str(workdir / "company_data.xlsx")
+    for _ in range(2):
+        out = exported(
+            call(
+                "export_profile",
+                file_path=source,
+                output_path="q3_report.xlsx",
+                detect_pii=False,
+            )
         )
+    assert out == workdir / "q3_report.xlsx"
+
+
+@pytest.mark.parametrize("name", ["customers_profile.csv", "company_data_profile.xlsx"])
+def test_export_never_overwrites_a_user_file_named_like_a_profile(workdir, name):
+    # e.g. a CRM export called customers_profile.csv next to customers.csv
+    user_file = workdir / name
+    shutil.copy(workdir / name.replace("_profile", ""), user_file)
+    before = user_file.read_bytes()
+    source = workdir / name.replace("_profile", "")
+    result = call("export_profile", file_path=str(source), detect_pii=False)
+    assert "won't be overwritten" in error_text(result)
+    assert user_file.read_bytes() == before
+
+
+def test_export_target_that_is_a_folder(workdir):
+    (workdir / "customers_profile.csv").mkdir()
+    result = call(
+        "export_profile", file_path=str(workdir / "customers.csv"), detect_pii=False
     )
-    assert out == target
-    assert target.read_text(encoding="utf-8-sig").startswith("column_name,")
+    assert "is a folder" in error_text(result)
+
+
+@posix_only
+def test_export_refuses_a_link_to_the_input(workdir):
+    source = workdir / "customers.csv"
+    (workdir / "customers_profile.csv").symlink_to(source)
+    os.link(source, workdir / "hard_profile.csv")
+    for output in (None, "hard_profile.csv"):
+        result = call(
+            "export_profile",
+            file_path=str(source),
+            output_path=output,
+            detect_pii=False,
+        )
+        assert "can't be the input file" in error_text(result)
+    assert source.read_bytes() == CUSTOMERS_CSV.read_bytes()
+
+
+@posix_only
+def test_export_refuses_a_link_to_another_user_file(workdir):
+    important = workdir / "important.csv"
+    important.write_text("keep me")
+    (workdir / "customers_profile.csv").symlink_to(important)
+    result = call(
+        "export_profile", file_path=str(workdir / "customers.csv"), detect_pii=False
+    )
+    assert "won't be overwritten" in error_text(result)
+    assert important.read_text() == "keep me"
+
+
+@posix_only
+def test_linked_input_is_named_and_saved_as_given(workdir):
+    (workdir / "reports").mkdir()
+    link = workdir / "reports" / "latest.csv"
+    link.symlink_to(workdir / "customers.csv")
+    data = ok_json(call("profile_dataset", file_path=str(link), detect_pii=False))
+    assert data["file_name"] == "latest.csv"
+    out = exported(call("export_profile", file_path=str(link), detect_pii=False))
+    assert out == workdir / "reports" / "latest_profile.csv"
+
+
+def test_failed_write_keeps_the_earlier_profile(workdir, monkeypatch):
+    source = str(workdir / "customers.csv")
+    earlier = exported(call("export_profile", file_path=source, detect_pii=False))
+    before = earlier.read_bytes()
+
+    def disk_full(*args, **kwargs):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(mcp_server.os, "replace", disk_full)
+    result = call("export_profile", file_path=source, detect_pii=False)
+    assert "No space left on device" in error_text(result)
+    assert earlier.read_bytes() == before
+    assert not list(workdir.glob(".*.tmp"))
 
 
 @pytest.mark.parametrize(
@@ -286,9 +385,28 @@ def test_missing_file(tmp_path):
 
 def test_folder_with_a_csv_name(tmp_path):
     (tmp_path / "folder.csv").mkdir()
-    assert "File not found" in error_text(
+    assert "is not a regular file" in error_text(
         call("profile_dataset", file_path=str(tmp_path / "folder.csv"))
     )
+
+
+def test_permission_errors_are_explained_without_a_traceback(monkeypatch, caplog):
+    def denied(self):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(Path, "exists", denied)
+    with caplog.at_level(logging.DEBUG):
+        message = error_text(call("profile_dataset", file_path=str(CUSTOMERS_CSV)))
+    assert "Permission denied" in message
+    assert "Privacy & Security" in message
+    assert "Traceback" not in caplog.text
+
+
+def test_unknown_home_folder(tmp_path):
+    message = error_text(
+        call("profile_dataset", file_path="~no_such_user_dhc/data.csv")
+    )
+    assert "Use a full path" in message
 
 
 @pytest.mark.parametrize(
@@ -328,7 +446,9 @@ def test_files_over_the_size_limit_are_not_read(tmp_path, monkeypatch):
     monkeypatch.setattr(profiler, "MAX_FILE_BYTES", 2)
     reads = []
     monkeypatch.setattr(Path, "read_bytes", lambda self: reads.append(self) or b"")
-    assert "over the" in error_text(call("profile_dataset", file_path=str(big)))
+    message = error_text(call("profile_dataset", file_path=str(big)))
+    assert "over the" in message and "split it" in message
+    assert "README" not in message  # web-app advice doesn't apply here
     assert reads == []
 
 
@@ -336,9 +456,31 @@ def test_files_over_the_size_limit_are_not_read(tmp_path, monkeypatch):
 
 
 def stdio_server() -> StdioServerParameters:
+    # Point the server at the code under test, whatever is installed; -P keeps
+    # the working folder off sys.path, as in the documented launch command.
+    source_root = str(Path(data_health_check.__file__).parents[1])
     return StdioServerParameters(
-        command=sys.executable, args=["-m", "data_health_check.mcp_server"]
+        command=sys.executable,
+        args=["-P", "-m", "data_health_check.mcp_server"],
+        env={**get_default_environment(), "PYTHONPATH": source_root},
     )
+
+
+def test_stdio_server_ignores_modules_in_the_working_folder(tmp_path):
+    # A user's csv.py in the folder the client launches from must not be
+    # imported instead of the standard library's csv module.
+    (tmp_path / "csv.py").write_text("print('shadow'); raise SystemExit(3)\n")
+    params = stdio_server()
+    params.cwd = str(tmp_path)
+    data = ok_json(
+        call(
+            "profile_dataset",
+            target=params,
+            file_path=str(CUSTOMERS_CSV),
+            detect_pii=False,
+        )
+    )
+    assert data["row_count"] == 200
 
 
 def test_stdio_server_lite():
@@ -368,3 +510,25 @@ def test_stdio_server_full():
     ssn = next(c for c in columns(data) if c["column_name"] == "ssn")
     assert ssn["sample_values"] == "[masked: SSN]"
     assert_no_raw_sensitive_values(result.content[0].text)
+
+
+def test_lite_mode_hides_min_max_of_number_columns(tmp_path):
+    path = tmp_path / "ids.csv"
+    path.write_bytes(digits_only_ids_csv())
+    result = call("profile_dataset", file_path=str(path), detect_pii=False)
+    for column in columns(ok_json(result)):
+        assert column["min"] == column["max"] == masking.LITE_MODE_PLACEHOLDER
+    assert "900000000" not in result.content[0].text
+
+
+@pytest.mark.full_mode
+def test_full_mode_masks_min_max_of_numeric_ssns(tmp_path):
+    path = tmp_path / "ids.csv"
+    path.write_bytes(digits_only_ids_csv())
+    result = call("profile_dataset", file_path=str(path))
+    by_name = {c["column_name"]: c for c in columns(ok_json(result))}
+    assert by_name["ssn"]["data_label"] == "SSN"
+    assert by_name["ssn"]["min"] == by_name["ssn"]["max"] == "[masked: SSN]"
+    assert by_name["quantity"]["max"] == 12
+    for raw in ("900000000", "2025550100", "4111111111111111"):
+        assert raw not in result.content[0].text

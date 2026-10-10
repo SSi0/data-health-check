@@ -49,3 +49,14 @@ def xlsx_profile_full(get_labeler) -> profiler.DatasetProfile:
 
 def columns_by_name(sheet: profiler.SheetProfile) -> dict[str, dict]:
     return {column["column_name"]: column for column in sheet.columns}
+
+
+def digits_only_ids_csv() -> bytes:
+    """Fake SSNs, phones and cards stored as plain digits (typed as numbers)."""
+    lines = ["ssn,phone,card,quantity"]
+    for i in range(200):
+        lines.append(
+            f"{900000000 + i * 4999},{2025550100 + i % 100},"
+            f"{4111111111111111 + i * 2},{i % 12 + 1}"
+        )
+    return ("\n".join(lines) + "\n").encode()
