@@ -66,3 +66,58 @@ def test_lite_mode_hides_samples_whatever_the_label(label):
 @pytest.mark.parametrize("checked", [True, False])
 def test_empty_samples_stay_empty(checked):
     assert masking.mask_samples([], "SSN", labels_checked=checked) == []
+
+
+def numeric_column(**overrides):
+    column = {
+        "column_name": "id",
+        "data_type": "int",
+        "data_label": "INTEGER",
+        "min": 900112222,
+        "max": 999887777,
+        "median": 950000000.5,
+        "mean": 949000000.0,
+        "stddev": 1000.0,
+        "sample_values": ["901112222", "902223333"],
+    }
+    column.update(overrides)
+    return column
+
+
+def test_sensitive_number_columns_mask_values_copied_from_the_data():
+    protected = masking.protect_column(
+        numeric_column(data_label="SSN"), labels_checked=True
+    )
+    for key in ("min", "max", "median"):
+        assert protected[key] == "[masked: SSN]"
+    assert protected["sample_values"] == ["[masked: SSN]"]
+    assert protected["mean"] == 949000000.0  # aggregates are kept
+    assert protected["stddev"] == 1000.0
+
+
+def test_safe_columns_are_unchanged():
+    column = numeric_column()
+    assert masking.protect_column(column, labels_checked=True) == column
+
+
+def test_lite_mode_hides_number_statistics_but_not_dates():
+    lite = masking.protect_column(numeric_column(), labels_checked=False)
+    assert lite["min"] == lite["max"] == lite["median"] == "[hidden: Lite mode]"
+    assert lite["mean"] == 949000000.0
+    dates = masking.protect_column(
+        {
+            "data_type": "datetime",
+            "min": "2025-01-01",
+            "max": "2025-12-31",
+            "sample_values": ["2025-02-03"],
+        },
+        labels_checked=False,
+    )
+    assert (dates["min"], dates["max"]) == ("2025-01-01", "2025-12-31")
+    assert dates["sample_values"] == ["[hidden: Lite mode]"]
+
+
+def test_protect_column_does_not_modify_its_input():
+    column = numeric_column(data_label="SSN")
+    masking.protect_column(column, labels_checked=True)
+    assert column["min"] == 900112222

@@ -2,6 +2,7 @@
 
 import codecs
 import io
+import warnings
 
 import pytest
 from openpyxl import Workbook
@@ -160,3 +161,18 @@ def test_empty_sheet_next_to_data_is_reported_not_profiled():
     assert (data.sheet_name, data.row_count) == ("Data", 1)
     assert (empty.sheet_name, empty.row_count, empty.columns) == ("Empty", 0, [])
     assert "nothing to profile" in empty.note
+
+
+def test_reader_warnings_that_quote_cell_values_are_not_printed(capfd):
+    # openpyxl warns "serial value 968226991 is outside the limits for dates"
+    # when a number sits in a date-formatted cell; the value must not leak.
+    def build(wb):
+        wb.active.append(["id", "joined"])
+        wb.active.append([1, 968226991])
+        wb.active["B2"].number_format = "yyyy-mm-dd"
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        profile_lite(workbook_bytes(build), "dates.xlsx")
+    assert not any("968226991" in str(w.message) for w in caught)
+    assert "968226991" not in capfd.readouterr().err

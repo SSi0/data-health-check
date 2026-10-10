@@ -30,3 +30,6 @@ Thumbs.db
 *.xlsx
 !tests/fixtures/*.csv
 !tests/fixtures/*.xlsx
+# Profiles written next to the fixtures (e.g. by export_profile) are outputs.
+tests/fixtures/*_profile.csv
+tests/fixtures/*_profile.xlsx

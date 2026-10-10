@@ -8,7 +8,7 @@ import sys
 import pytest
 
 from conftest import CUSTOMERS_CSV, columns_by_name
-from data_health_check import profiler
+from data_health_check import masking, profiler
 from fixtures.generate_fixtures import customer_rows
 
 LITE_FIELDS = tuple(f for f in profiler.COLUMN_FIELDS if f not in profiler.LABEL_FIELDS)
@@ -260,3 +260,43 @@ def test_full_mode_xlsx(xlsx_profile_full):
     customers, orders = xlsx_profile_full.sheets
     assert columns_by_name(customers)["ssn"]["data_label"] == "SSN"
     assert columns_by_name(orders)["contact_email"]["data_label"] == "EMAIL_ADDRESS"
+
+
+def digits_only_ids_csv() -> bytes:
+    """Fake SSNs, phones and cards stored as plain digits (typed as numbers)."""
+    lines = ["ssn,phone,card,quantity"]
+    for i in range(200):
+        lines.append(
+            f"{900000000 + i * 4999},{2025550100 + i % 100},"
+            f"{4111111111111111 + i * 2},{i % 12 + 1}"
+        )
+    return ("\n".join(lines) + "\n").encode()
+
+
+def test_lite_mode_hides_min_max_median_of_number_columns():
+    profile = profiler.profile_file(digits_only_ids_csv(), "ids.csv", detect_pii=False)
+    rows = {r["column_name"]: r for r in profile.column_rows(profile.sheets[0])}
+    for name in ("ssn", "phone", "card", "quantity"):
+        assert rows[name]["min"] == rows[name]["max"] == "[hidden: Lite mode]", name
+        # DataProfiler gives no median for some very large numbers.
+        assert rows[name]["median"] in ("[hidden: Lite mode]", None), name
+    assert isinstance(rows["quantity"]["mean"], float)
+    revealed = profile.column_rows(profile.sheets[0], reveal_sensitive=True)
+    assert revealed[0]["min"] == 900000000
+
+
+@pytest.mark.full_mode
+def test_full_mode_masks_min_max_of_sensitive_number_columns(get_labeler):
+    profile = profiler.profile_file(
+        digits_only_ids_csv(), "ids.csv", get_labeler=get_labeler
+    )
+    rows = {r["column_name"]: r for r in profile.column_rows(profile.sheets[0])}
+    assert rows["ssn"]["data_type"] == "int"
+    assert rows["ssn"]["data_label"] == "SSN"
+    for name, row in rows.items():
+        if masking.is_sensitive(row["data_label"]):
+            placeholder = masking.mask_placeholder(row["data_label"])
+            assert row["min"] == row["max"] == placeholder, name
+            assert row["median"] in (placeholder, None), name
+    assert rows["quantity"]["data_label"] == "INTEGER"
+    assert rows["quantity"]["max"] == 12

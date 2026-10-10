@@ -90,12 +90,19 @@ FIELD_GUIDE: dict[str, str] = {
         "value is different (typical for IDs); close to 0 means a few values "
         "repeat a lot (typical for categories)."
     ),
-    "min": "The smallest value. Number and date columns only.",
-    "max": "The largest value. Number and date columns only.",
+    "min": (
+        "The smallest value. Number and date columns only. Like sample_values, "
+        "it is masked in sensitive columns and hidden for number columns in Lite "
+        "mode, because it is a real value from your data."
+    ),
+    "max": (
+        "The largest value. Number and date columns only. Masked and hidden like min."
+    ),
     "mean": "The average. Number columns only.",
     "median": (
         "The middle value: half the values are below it. Number columns only; "
-        "DataProfiler estimates it, so it can be slightly approximate."
+        "DataProfiler estimates it, so it can be slightly approximate. Masked and "
+        "hidden like min."
     ),
     "stddev": (
         "Standard deviation: how spread out the numbers are around the average. "
@@ -105,8 +112,9 @@ FIELD_GUIDE: dict[str, str] = {
         "Up to 5 example values, separated by '; '. In columns detected as "
         "sensitive (such as emails, phone numbers or SSNs) they are replaced by "
         "[masked: LABEL]. Lite mode can't detect sensitive columns, so there all "
-        "examples are replaced by [hidden: Lite mode], unless you chose to show "
-        "them."
+        "examples are replaced by [hidden: Lite mode], unless whoever made the "
+        "profile chose to show them. Detection can miss columns (names are often "
+        "labelled UNKNOWN), so treat unmasked examples as possibly personal."
     ),
     "rows_profiled": (
         "How many rows were analysed. For large files DataProfiler analyses a "
@@ -246,18 +254,18 @@ class DatasetProfile:
         """Return output-ready rows (one per column) for ``sheet``.
 
         ``sample_values`` is joined into one string. Unless ``reveal_sensitive``
-        is True, samples of sensitive columns are masked, and in Lite mode all
-        samples are hidden (see :mod:`data_health_check.masking`).
+        is True, values copied from the data (samples, and min/max/median) are
+        masked in sensitive columns and hidden in Lite mode, following
+        :mod:`data_health_check.masking`.
         """
         rows = []
         for column in sheet.columns:
-            samples = column.get("sample_values") or []
             if not reveal_sensitive:
-                samples = masking.mask_samples(
-                    samples, column.get("data_label"), labels_checked=self.detect_pii
-                )
+                column = masking.protect_column(column, labels_checked=self.detect_pii)
             row = {name: column.get(name) for name in self.column_fields()}
-            row["sample_values"] = SAMPLE_SEPARATOR.join(samples)
+            row["sample_values"] = SAMPLE_SEPARATOR.join(
+                column.get("sample_values") or []
+            )
             rows.append(row)
         return rows
 
@@ -334,10 +342,14 @@ def read_tables(data: bytes, file_format: str) -> list[tuple[str | None, pd.Data
     and null detection.
     """
     try:
-        if file_format == "csv":
-            return [(None, _read_csv(data))]
-        if file_format == "xlsx":
-            return _read_xlsx(data)
+        with warnings.catch_warnings():
+            # Reader warnings can quote cell values (e.g. openpyxl's "serial
+            # value ... is outside the limits for dates"): never print them.
+            warnings.simplefilter("ignore")
+            if file_format == "csv":
+                return [(None, _read_csv(data))]
+            if file_format == "xlsx":
+                return _read_xlsx(data)
     except MemoryError:
         raise OutOfMemoryError(OUT_OF_MEMORY_MESSAGE) from None
     raise UnsupportedFileTypeError(f"Unsupported format: {file_format!r}.")
@@ -438,7 +450,7 @@ def _read_xlsx(data: bytes) -> list[tuple[str | None, pd.DataFrame]]:
             raise PasswordProtectedError(
                 "This Excel file is password-protected, so it can't be read. In "
                 "Excel, open it, go to File > Info > Protect Workbook > Encrypt "
-                "with Password, delete the password, save, and upload it again."
+                "with Password, delete the password, save it, and try again."
             )
         raise UnsupportedFileTypeError(
             "This looks like an older Excel file (.xls) renamed to .xlsx. Open it "
