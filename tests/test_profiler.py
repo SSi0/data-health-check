@@ -146,8 +146,14 @@ def test_to_dict_is_json_and_hides_samples_by_default(xlsx_profile_lite):
             assert None not in column.values()
 
 
-def test_to_dict_can_include_samples(csv_profile_lite):
+def test_lite_mode_hides_every_sample(csv_profile_lite):
     result = csv_profile_lite.to_dict(include_samples=True)
+    for column in result["sheets"][0]["columns"]:
+        assert column["sample_values"] == "[hidden: Lite mode]", column["column_name"]
+
+
+def test_lite_mode_samples_can_be_revealed(csv_profile_lite):
+    result = csv_profile_lite.to_dict(include_samples=True, reveal_sensitive=True)
     column = result["sheets"][0]["columns"][0]
     assert column["column_name"] == "customer_id"
     assert len(column["sample_values"].split("; ")) == 5

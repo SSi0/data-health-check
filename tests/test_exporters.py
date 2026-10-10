@@ -107,6 +107,21 @@ def test_lite_csv_has_no_label_columns():
     assert "data_label_confidence" not in rows[0]
 
 
+def test_lite_csv_hides_all_samples_unless_revealed():
+    profile = make_profile("csv", mode="lite")
+    rows = read_csv(exporters.to_csv_bytes(profile))
+    assert {row["sample_values"] for row in rows} == {"[hidden: Lite mode]"}
+    revealed = read_csv(exporters.to_csv_bytes(profile, reveal_sensitive=True))
+    assert revealed[2]["sample_values"] == "30; 41"
+
+
+def test_lite_xlsx_hides_all_samples():
+    workbook = load(exporters.to_xlsx_bytes(make_profile("xlsx", mode="lite")))
+    rows = list(workbook["People"].iter_rows(values_only=True))
+    column = rows[0].index("sample_values")
+    assert {row[column] for row in rows[1:]} == {"[hidden: Lite mode]"}
+
+
 def test_csv_neutralizes_formulas_but_not_negative_numbers():
     sheet = profiler.SheetProfile(
         None,

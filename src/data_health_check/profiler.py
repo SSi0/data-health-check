@@ -104,7 +104,9 @@ FIELD_GUIDE: dict[str, str] = {
     "sample_values": (
         "Up to 5 example values, separated by '; '. In columns detected as "
         "sensitive (such as emails, phone numbers or SSNs) they are replaced by "
-        "[masked: LABEL]."
+        "[masked: LABEL]. Lite mode can't detect sensitive columns, so there all "
+        "examples are replaced by [hidden: Lite mode], unless you chose to show "
+        "them."
     ),
     "rows_profiled": (
         "How many rows were analysed. For large files DataProfiler analyses a "
@@ -243,14 +245,17 @@ class DatasetProfile:
     ) -> list[dict[str, Any]]:
         """Return output-ready rows (one per column) for ``sheet``.
 
-        ``sample_values`` is joined into one string. Samples of sensitive
-        columns are masked unless ``reveal_sensitive`` is True.
+        ``sample_values`` is joined into one string. Unless ``reveal_sensitive``
+        is True, samples of sensitive columns are masked, and in Lite mode all
+        samples are hidden (see :mod:`data_health_check.masking`).
         """
         rows = []
         for column in sheet.columns:
             samples = column.get("sample_values") or []
             if not reveal_sensitive:
-                samples = masking.mask_samples(samples, column.get("data_label"))
+                samples = masking.mask_samples(
+                    samples, column.get("data_label"), labels_checked=self.detect_pii
+                )
             row = {name: column.get(name) for name in self.column_fields()}
             row["sample_values"] = SAMPLE_SEPARATOR.join(samples)
             rows.append(row)

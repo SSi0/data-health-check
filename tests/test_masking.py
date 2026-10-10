@@ -55,3 +55,14 @@ def test_mask_samples_returns_a_copy():
     result = masking.mask_samples(samples, "INTEGER")
     result.append("y")
     assert samples == ["x"]
+
+
+@pytest.mark.parametrize("label", [None, "INTEGER", "SSN"])
+def test_lite_mode_hides_samples_whatever_the_label(label):
+    hidden = masking.mask_samples(["a", "b"], label, labels_checked=False)
+    assert hidden == [masking.LITE_MODE_PLACEHOLDER] == ["[hidden: Lite mode]"]
+
+
+@pytest.mark.parametrize("checked", [True, False])
+def test_empty_samples_stay_empty(checked):
+    assert masking.mask_samples([], "SSN", labels_checked=checked) == []

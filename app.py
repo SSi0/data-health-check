@@ -97,14 +97,14 @@ def sidebar() -> tuple[bool, bool]:
         reveal = st.toggle(
             REVEAL_TOGGLE,
             key=REVEAL_TOGGLE,
-            disabled=not detect_pii,
             help=(
-                "Off: in columns detected as sensitive, example values are replaced "
-                "by [masked: LABEL] on screen and in the download. Turn on only if "
-                "you need to see them."
+                "Off: example values in columns detected as sensitive are replaced "
+                "by [masked: LABEL], and in Lite mode (which can't detect them) all "
+                "example values are hidden, on screen and in the download. Turn on "
+                "only if you need to see them."
             ),
         )
-    return detect_pii, reveal and detect_pii
+    return detect_pii, reveal
 
 
 def intro() -> None:
@@ -218,11 +218,16 @@ def show_results(
         icon=":material/download:",
         on_click="ignore",
     )
-    if profile.detect_pii and not reveal:
+    if not reveal:
+        hidden = (
+            "Example values in columns detected as sensitive are masked"
+            if profile.detect_pii
+            else "Example values are hidden in Lite mode, because it can't tell "
+            "which columns are sensitive"
+        )
         st.caption(
-            "Example values in columns detected as sensitive are masked, on "
-            f"screen and in the download. To show them, use '{REVEAL_TOGGLE}' in "
-            "the sidebar."
+            f"{hidden}, on screen and in the download. To show them, use "
+            f"'{REVEAL_TOGGLE}' in the sidebar."
         )
 
     column_config = {

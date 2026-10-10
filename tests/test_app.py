@@ -57,6 +57,17 @@ def test_csv_upload_in_lite_mode_offers_csv_download():
     assert "customers_profile.csv" in button.proto.label
 
 
+def test_lite_mode_hides_samples_on_screen_unless_revealed():
+    app = upload(start(detect_pii=False), CUSTOMERS_CSV)
+    table = app.dataframe[0].value.set_index("column_name")
+    assert set(table["sample_values"]) == {"[hidden: Lite mode]"}
+    assert any("hidden in Lite mode" in c.value for c in app.caption)
+
+    app.toggle(key=REVEAL_TOGGLE).set_value(True).run()
+    table = app.dataframe[0].value.set_index("column_name")
+    assert table.loc["ssn", "sample_values"].count("-") == 10
+
+
 def test_upload_is_cleared_after_profiling():
     app = upload(start(detect_pii=False), CUSTOMERS_CSV)
     assert app.file_uploader[0].value is None

@@ -1,11 +1,16 @@
 """Masking rules for sample values of sensitive columns.
 
-Shared by the web app and the MCP server so both apply exactly the same rule:
-a column whose DataProfiler ``data_label`` names a sensitive type never shows
-its raw sample values; ``[masked: <LABEL>]`` is shown instead.
+Shared by the web app and the MCP server so both apply exactly the same rules:
+
+* a column whose DataProfiler ``data_label`` names a sensitive type never shows
+  its raw sample values; ``[masked: <LABEL>]`` is shown instead;
+* in Lite mode no labels exist, so no column can be shown to be safe: every
+  column's samples are replaced by ``[hidden: Lite mode]``.
 """
 
 from __future__ import annotations
+
+LITE_MODE_PLACEHOLDER = "[hidden: Lite mode]"
 
 SENSITIVE_LABELS: frozenset[str] = frozenset(
     {
@@ -46,8 +51,19 @@ def mask_placeholder(data_label: str | None) -> str:
     return f"[masked: {'|'.join(sensitive_labels(data_label))}]"
 
 
-def mask_samples(samples: list[str], data_label: str | None) -> list[str]:
-    """Return ``samples`` unchanged, or a single placeholder if sensitive."""
+def mask_samples(
+    samples: list[str], data_label: str | None, *, labels_checked: bool = True
+) -> list[str]:
+    """Return the samples that are safe to show.
+
+    ``labels_checked`` is False in Lite mode, when the data labeler did not run:
+    then every sample is hidden. Otherwise samples of sensitive columns are
+    replaced by one placeholder and the rest are returned unchanged.
+    """
+    if not samples:
+        return []
+    if not labels_checked:
+        return [LITE_MODE_PLACEHOLDER]
     if is_sensitive(data_label):
         return [mask_placeholder(data_label)]
     return list(samples)
