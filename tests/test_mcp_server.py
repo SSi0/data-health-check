@@ -677,3 +677,30 @@ def test_unidentified_columns_are_hidden_with_a_warning(tmp_path):
     assert "could not be identified" in data["warnings"][0]
     assert "'contact'" in data["warnings"][0]
     assert_no_raw_sensitive_values(result.content[0].text)
+
+
+def installed_launcher() -> Path | None:
+    folder = Path(sys.executable).parent
+    for name in ("data-health-check-mcp", "data-health-check-mcp.exe"):
+        if (folder / name).is_file():
+            return folder / name
+    return None
+
+
+@pytest.mark.skipif(installed_launcher() is None, reason="package not installed")
+def test_installed_command_starts_the_server_safely(tmp_path):
+    # The data-health-check-mcp launcher needs no -P: it never puts the folder
+    # it is started from on sys.path, so a csv.py there is ignored.
+    (tmp_path / "csv.py").write_text("print('shadow'); raise SystemExit(3)\n")
+    params = StdioServerParameters(
+        command=str(installed_launcher()), args=[], cwd=str(tmp_path)
+    )
+    data = ok_json(
+        call(
+            "profile_dataset",
+            target=params,
+            file_path=str(CUSTOMERS_CSV),
+            detect_pii=False,
+        )
+    )
+    assert data["row_count"] == 200

@@ -47,6 +47,11 @@ dev = [
     "ruff==0.16.10",
 ]
 
+[project.scripts]
+# Starts the MCP server. Unlike "python -m", a launcher never puts the folder
+# it is started from on sys.path, so files there can't shadow real modules.
+data-health-check-mcp = "data_health_check.mcp_server:main"
+
 [project.urls]
 Homepage = "https://github.com/SSi0/data-health-check"
 Repository = "https://github.com/SSi0/data-health-check"

@@ -1,11 +1,13 @@
 """Local MCP server: lets AI agents (such as Claude) use the profiling engine.
 
-Runs over stdio::
+Runs over stdio, started by the ``data-health-check-mcp`` command that
+installing the package creates, or equivalently::
 
     python -P -m data_health_check.mcp_server
 
 (``-P`` keeps the launch folder off ``sys.path``, so a file such as ``csv.py``
-in the folder the client starts the server in can't shadow a real module.)
+in the folder the client starts the server in can't shadow a real module; the
+installed command never has that problem.)
 
 It reuses the same engine, masking rules and exporters as the web app. Values
 copied from the data (samples, min, max, median) are masked in columns the
@@ -440,6 +442,7 @@ def _write_all(handle: int, data: bytes) -> None:
 
 
 def main() -> None:
+    """Entry point of the ``data-health-check-mcp`` command."""
     server.run("stdio")
 
 
