@@ -1,0 +1,450 @@
+"""Local MCP server: lets AI agents (such as Claude) use the profiling engine.
+
+Runs over stdio, started by the ``data-health-check-mcp`` command that
+installing the package creates, or equivalently::
+
+    python -P -m data_health_check.mcp_server
+
+(``-P`` keeps the launch folder off ``sys.path``, so a file such as ``csv.py``
+in the folder the client starts the server in can't shadow a real module; the
+installed command never has that problem.)
+
+It reuses the same engine, masking rules and exporters as the web app. Values
+copied from the data (samples, min, max, median) are masked in columns the
+labeler identifies as sensitive and hidden in Lite mode (``detect_pii=false``).
+"""
+
+from __future__ import annotations
+
+import contextlib
+import errno
+import functools
+import logging
+import os
+import stat
+import tempfile
+import threading
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Annotated, Any, TypeVar
+
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
+from mcp_types import ToolAnnotations
+from pydantic import Field
+
+from data_health_check import __version__, exporters, profiler
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+INSTRUCTIONS = """\
+Data Health Check profiles local CSV (.csv) and Excel (.xlsx) files: for every
+column it reports the data type, how many values are empty or unique, basic
+statistics and, with detect_pii=true, what the values appear to be (for example
+EMAIL_ADDRESS, PHONE_NUMBER or SSN) with a confidence score.
+
+Use profile_dataset to answer questions about a file's structure, data quality
+or personal data. Use export_profile when the user wants the profile saved as a
+file. Pass absolute file paths ("~" is expanded).
+
+Privacy: sample values are off by default. In columns the labeler identifies
+as sensitive, sample values and number statistics are replaced by
+"[masked: LABEL]"; in columns it labels "could not determine" (often a mix of
+kinds of values) they are "[hidden: could not determine]", and the result's
+"warnings" list says how many such columns there are; in Lite mode
+(detect_pii=false) every sample, and min/max/median of number columns, is
+"[hidden: Lite mode]". If a file's first row looks like data rather than
+column names, it is profiled as data and columns are named
+"Column 1 (no header)" and so on. Detection is automatic and can miss things:
+names are often labelled UNKNOWN and free text is not checked. Treat any
+unmasked value as possibly personal: request samples only when you need them,
+and don't repeat values to the user unless they ask. Tell the user about any
+warnings.
+"""
+
+server = MCPServer(
+    name="data-health-check",
+    title="Data Health Check",
+    version=__version__,
+    instructions=INSTRUCTIONS,
+    log_level="WARNING",
+)
+
+GENERIC_ERROR = (
+    "Something went wrong while profiling this file. Check that it opens "
+    "correctly in a spreadsheet app, or try again with detect_pii=false."
+)
+PERMISSION_ERROR = (
+    "Permission denied: the server isn't allowed to read or write there. On a "
+    "Mac, the app that runs this server may need access to that folder (System "
+    "Settings > Privacy & Security > Files and Folders)."
+)
+
+_labeler_lock = threading.Lock()
+
+
+@functools.cache
+def _load_labeler() -> Any:
+    return profiler.load_labeler()
+
+
+def get_labeler() -> Any:
+    """The data labeler, loaded once per server process on first use."""
+    with _labeler_lock:
+        return _load_labeler()
+
+
+# --------------------------------------------------------------------------
+# Tools
+# --------------------------------------------------------------------------
+
+FilePath = Annotated[
+    str,
+    Field(
+        description='Absolute path to a local .csv or .xlsx file, up to 25 MB; "~" '
+        "is expanded. Every sheet of a workbook is profiled."
+    ),
+]
+DetectPii = Annotated[
+    bool,
+    Field(
+        description="True (Full mode): a machine-learning labeler adds data_label "
+        "and data_label_confidence to every column with values, e.g. EMAIL_ADDRESS "
+        "or SSN; the first call loads the model and can take up to a minute. "
+        "False (Lite mode): faster and lighter, but sensitive data can't be "
+        "detected, so every sample and min/max/median of number columns are hidden."
+    ),
+]
+IncludeSamples = Annotated[
+    bool,
+    Field(
+        description="Include up to 5 example values per column. In columns labelled "
+        'as sensitive they are "[masked: <LABEL>]", and in Lite mode they are all '
+        '"[hidden: Lite mode]". Detection can miss columns (e.g. names labelled '
+        "UNKNOWN), so treat unmasked samples as possibly personal."
+    ),
+]
+OutputPath = Annotated[
+    str | None,
+    Field(
+        description='Where to save the profile. Default: "<input name>_profile.'
+        '<csv|xlsx>" next to the input file. May be a folder, or a file path with '
+        "the same extension as the input; relative paths are resolved against "
+        "the input file's folder. An existing file is replaced only if it is a "
+        "profile made by this tool; the input file and any other existing file "
+        "are never overwritten."
+    ),
+]
+
+
+PROFILE_DATASET_DESCRIPTION = """\
+Profile a local .csv or .xlsx file and return the results as JSON.
+
+Use this to understand a dataset before working with it: which columns it
+has, their data types, how complete they are, basic statistics, and which
+columns appear to contain personal or sensitive data (emails, phone numbers,
+SSNs, credit cards, addresses, IP addresses and so on). The file is read
+locally and is not modified.
+
+Sample values are off by default. In columns labelled as sensitive, samples
+and number statistics are replaced by "[masked: <LABEL>]"; in columns
+labelled "could not determine" they are "[hidden: could not determine]"; in
+Lite mode (detect_pii=false) every sample, and min/max/median of number
+columns, is "[hidden: Lite mode]". Detection is automatic and can miss
+columns (names are often labelled UNKNOWN, free text isn't checked), so treat
+any unmasked value as possibly personal.
+
+Returns:
+    A summary (file_name, file_format, mode, profiled_at, row_count,
+    column_count, sheet_count), a "warnings" list (for example how many
+    columns could not be identified; pass these on to the user) and a list of
+    sheets (sheet_name is null for CSV), each with row_count, column_count,
+    rows_profiled, sampled, note (e.g. that the file has no header row, so
+    columns are named "Column 1 (no header)" and so on) and columns. Each
+    column has column_name, null_count, null_percent, unique_count,
+    unique_ratio and rows_profiled, and, when they apply,
+    data_type, data_label, data_label_confidence, min, max, mean, median,
+    stddev and sample_values (a column with no values has no data_type or
+    label). Large tables are profiled on a random sample of rows; then
+    sampled is true and counts describe the sample.
+"""
+
+EXPORT_PROFILE_DESCRIPTION = """\
+Profile a local .csv or .xlsx file and save the profile as a file.
+
+Use this when the user wants a profile they can open or share. The profile
+has the same format as the input: a .csv input gives a .csv profile with one
+row per column; an .xlsx input gives an .xlsx profile with a Summary sheet,
+one profile sheet per input sheet and a Field guide sheet. In the file,
+samples and min/max/median of sensitive columns are "[masked: <LABEL>]", and
+in Lite mode (detect_pii=false) all samples, and min/max/median of number
+columns, are "[hidden: Lite mode]".
+
+It never overwrites the input file or an existing file that isn't a profile
+made by this tool; an earlier profile at the same path is replaced.
+
+Returns:
+    The absolute path of the saved profile file.
+"""
+
+
+@server.tool(
+    description=PROFILE_DATASET_DESCRIPTION,
+    annotations=ToolAnnotations(
+        title="Profile a CSV or Excel file",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
+    ),
+)
+def profile_dataset(
+    file_path: FilePath,
+    detect_pii: DetectPii = True,
+    include_samples: IncludeSamples = False,
+) -> dict[str, Any]:
+    """Profile a file and return JSON (see PROFILE_DATASET_DESCRIPTION)."""
+
+    def run() -> dict[str, Any]:
+        given, real = _input_path(file_path)
+        profile = _profile(given, real, detect_pii)
+        return profile.to_dict(include_samples=include_samples)
+
+    return _run(run)
+
+
+@server.tool(
+    description=EXPORT_PROFILE_DESCRIPTION,
+    annotations=ToolAnnotations(
+        title="Save a profile file next to a CSV or Excel file",
+        read_only_hint=False,
+        destructive_hint=True,  # it can replace an earlier profile
+        idempotent_hint=True,
+        open_world_hint=False,
+    ),
+)
+def export_profile(
+    file_path: FilePath, output_path: OutputPath = None, detect_pii: DetectPii = True
+) -> str:
+    """Profile a file and save it (see EXPORT_PROFILE_DESCRIPTION)."""
+
+    def run() -> str:
+        given, real = _input_path(file_path)
+        target = _output_path(given, real, output_path)
+        exported = exporters.export_profile(_profile(given, real, detect_pii))
+        _write_profile(target, exported.data)
+        return str(target.path)
+
+    return _run(run)
+
+
+# --------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------
+
+
+def _run(action: Callable[[], T]) -> T:
+    """Run ``action``, turning every failure into a ToolError the agent can read.
+
+    Unexpected exceptions are reported generically and logged by type only:
+    their messages can quote values from the file.
+    """
+    try:
+        return action()
+    except ToolError:
+        raise
+    except profiler.ProfilingError as exc:
+        raise ToolError(str(exc)) from None
+    except PermissionError:
+        raise ToolError(PERMISSION_ERROR) from None
+    except OSError as exc:
+        reason = exc.strerror or "input/output error"
+        raise ToolError(f"Couldn't access the file: {reason}.") from None
+    except Exception as exc:
+        logger.error("Tool failed with %s", type(exc).__name__)
+        raise ToolError(GENERIC_ERROR) from None
+
+
+def _profile(given: Path, real: Path, detect_pii: bool) -> profiler.DatasetProfile:
+    size = real.stat().st_size
+    if size > profiler.MAX_FILE_BYTES:  # check before reading it into memory
+        raise ToolError(
+            f"This file is {size / 1024 / 1024:.1f} MB, over the "
+            f"{profiler.MAX_FILE_MB} MB limit. Ask the user to remove rows or "
+            "columns they don't need, or to split it into smaller files."
+        )
+    return profiler.profile_file(
+        real.read_bytes(), given.name, detect_pii=detect_pii, get_labeler=get_labeler
+    )
+
+
+def _absolute(path_text: str, base: Path | None = None) -> Path:
+    """Expand "~" and make ``path_text`` absolute without following links."""
+    if "\x00" in path_text:
+        raise ToolError("The path contains a character that isn't allowed (NUL).")
+    try:
+        path = Path(path_text).expanduser()
+    except RuntimeError:  # "~someone" with no such user, or no home folder
+        raise ToolError(
+            f"Couldn't find the home folder in '{path_text}'. Use a full path."
+        ) from None
+    if not path.is_absolute():
+        path = (base or Path.cwd()) / path
+    return Path(os.path.normpath(path))
+
+
+def _resolve(path: Path) -> Path:
+    """Follow links; a link loop gets a clear message instead of a crash."""
+    try:
+        return path.resolve()
+    except RuntimeError:  # Python 3.12 raises this for a symlink loop
+        raise ToolError(f"{path} is a link that points back to itself.") from None
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise ToolError(f"{path} is a link that points back to itself.") from None
+        raise
+
+
+def _input_path(file_path: str) -> tuple[Path, Path]:
+    """Return the input as given (for its name and folder) and resolved (to read).
+
+    The given path decides the format and where profiles go, so a link named
+    ``customers.csv`` behaves like that name even if it points elsewhere.
+    """
+    given = _absolute(file_path)
+    if given.suffix.lower() not in profiler.SUPPORTED_EXTENSIONS:
+        raise ToolError(
+            f"Only .csv and .xlsx files are supported, and '{given.name}' is "
+            "neither. Ask the user to save it as CSV or Excel Workbook (.xlsx)."
+        )
+    real = _resolve(given)
+    if not real.exists():
+        raise ToolError(f"File not found: {given}")
+    if not real.is_file():
+        raise ToolError(f"{given} is not a regular file.")
+    return given, real
+
+
+@dataclass(frozen=True)
+class _Target:
+    """Where a profile will be written, as checked before profiling."""
+
+    path: Path  # the resolved file to write
+    shown: Path  # the location as requested, for messages
+    earlier: tuple[int, ...] | None  # signature of the earlier profile, if any
+
+
+def _signature(path: Path) -> tuple[int, ...] | None:
+    try:
+        info = path.stat()
+    except FileNotFoundError:
+        return None
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+
+
+def _output_path(given: Path, real: Path, output_path: str | None) -> _Target:
+    suffix = given.suffix.lower()
+    default_name = exporters.output_file_name(given.name)
+    if output_path is None:
+        shown = given.parent / default_name
+    else:
+        shown = _absolute(output_path, base=given.parent)
+        if shown.is_dir():
+            shown = shown / default_name
+        elif shown.suffix.lower() != suffix:
+            raise ToolError(
+                f"output_path must end in {suffix}, the same format as the input "
+                "file (or be an existing folder)."
+            )
+    # Follow links, so the checks below apply to the file that would be written.
+    target = _resolve(shown)
+    if shown.is_symlink() and not target.exists():
+        raise ToolError(
+            f"{shown} is a link to {target}, which doesn't exist, so nothing was "
+            "written. Remove the link or choose another output_path."
+        )
+    if target.suffix.lower() != suffix:
+        raise ToolError(
+            f"{shown} is a link to {target}, which isn't a {suffix} file, so it "
+            "won't be written. Choose another output_path."
+        )
+    if target == real or (target.exists() and os.path.samefile(target, real)):
+        raise ToolError(
+            f"The profile would overwrite the input file ({shown}). Choose another "
+            "output_path."
+        )
+    if target.is_dir():
+        raise ToolError(f"{shown} is a folder. Choose a file name for the profile.")
+    if not target.parent.is_dir():
+        raise ToolError(f"The folder {target.parent} doesn't exist.")
+    if not target.exists():
+        return _Target(target, shown, None)
+    if not exporters.is_profile_file(target):
+        raise ToolError(
+            f"{shown} already exists and isn't a profile made by Data Health Check "
+            "(or it has been changed, e.g. a sheet was added), so it won't be "
+            "overwritten. Choose another output_path."
+        )
+    if not target.stat().st_mode & stat.S_IWUSR:
+        raise ToolError(f"{shown} is read-only, so it won't be overwritten.")
+    return _Target(target, shown, _signature(target))
+
+
+def _write_profile(target: _Target, data: bytes) -> None:
+    """Write the profile without ever clobbering a file it shouldn't.
+
+    A new profile is created exclusively: if a file appeared at that name while
+    the profile was being made, it is left alone. An earlier profile is
+    replaced through a temporary file and ``os.replace``, so a failed write
+    (e.g. a full disk) leaves it intact; if it changed meanwhile, it is kept.
+    """
+    if target.earlier is None:
+        try:
+            handle = os.open(target.path, _NEW_FILE_FLAGS, 0o666)  # honours umask
+        except FileExistsError:
+            raise ToolError(_CHANGED_MEANWHILE.format(target.shown)) from None
+        try:
+            _write_all(handle, data)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.unlink(target.path)
+            raise
+        return
+
+    handle, temporary = tempfile.mkstemp(dir=target.path.parent, prefix=".dhc-")
+    try:
+        _write_all(handle, data)
+        if _signature(target.path) != target.earlier:
+            raise ToolError(_CHANGED_MEANWHILE.format(target.shown))
+        os.chmod(temporary, stat.S_IMODE(target.path.stat().st_mode))
+        os.replace(temporary, target.path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temporary)
+        raise
+
+
+_NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+_CHANGED_MEANWHILE = (
+    "{} was created or changed while the profile was being made, so it was left "
+    "untouched. Run export_profile again, or choose another output_path."
+)
+
+
+def _write_all(handle: int, data: bytes) -> None:
+    with os.fdopen(handle, "wb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def main() -> None:
+    """Entry point of the ``data-health-check-mcp`` command."""
+    server.run("stdio")
+
+
+if __name__ == "__main__":
+    main()
