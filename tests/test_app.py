@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from conftest import COMPANY_XLSX, CUSTOMERS_CSV, PASSWORD_XLSX
+from conftest import (
+    COMPANY_XLSX,
+    CUSTOMERS_CSV,
+    PASSWORD_XLSX,
+    mixed_contacts_csv,
+    without_header,
+)
 
 APP = str(Path(__file__).parents[1] / "app.py")
 PII_TOGGLE = "Detect sensitive data types (PII)"
@@ -154,3 +160,22 @@ def test_pii_toggle_is_disabled_when_tensorflow_is_missing(monkeypatch):
     assert toggle.value is False
     assert toggle.disabled
     assert "TensorFlow isn't installed" in app.sidebar.info[0].value
+
+
+def test_headerless_file_is_explained_on_screen():
+    app = start(detect_pii=False)
+    app.file_uploader[0].upload("raw.csv", without_header(CUSTOMERS_CSV.read_bytes()))
+    app.run()
+    table = app.dataframe[0].value
+    assert table["column_name"].iloc[0] == "Column 1 (no header)"
+    assert any("first row looks like data" in c.value for c in app.caption)
+
+
+@pytest.mark.full_mode
+def test_unidentified_columns_show_a_warning():
+    app = start(detect_pii=True)
+    app.file_uploader[0].upload("contacts.csv", mixed_contacts_csv())
+    app.run()
+    assert any("could not be identified" in w.value for w in app.warning)
+    table = app.dataframe[0].value.set_index("column_name")
+    assert table.loc["contact", "sample_values"] == "[hidden: could not determine]"

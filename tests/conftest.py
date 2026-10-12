@@ -60,3 +60,27 @@ def digits_only_ids_csv() -> bytes:
             f"{4111111111111111 + i * 2},{i % 12 + 1}"
         )
     return ("\n".join(lines) + "\n").encode()
+
+
+def mixed_contacts_csv() -> bytes:
+    """Columns mixing kinds of fake PII, which the labeler can't identify."""
+    lines = ["id,contact,secondary"]
+    for i in range(120):
+        contact = [
+            f"user{i}@example.com",
+            f"(202) 555-01{i % 100:02d}",
+            f"9{i % 90 + 10:02d}-22-{1000 + i:04d}",
+        ][i % 3]
+        secondary = [
+            f"9{i % 90 + 10:02d}-41-1234",
+            f"192.0.2.{i % 250 + 1}",
+            f"4111 1111 1111 {1000 + i:04d}",
+            f"Jane Doe {i}",
+        ][i % 4]
+        lines.append(f"{i},{contact},{secondary}")
+    return ("\n".join(lines) + "\n").encode()
+
+
+def without_header(data: bytes) -> bytes:
+    """The same CSV with its header row removed."""
+    return b"".join(data.splitlines(keepends=True)[1:])

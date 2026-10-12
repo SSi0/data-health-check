@@ -7,7 +7,7 @@ import warnings
 import pytest
 from openpyxl import Workbook
 
-from conftest import COMPANY_XLSX, CUSTOMERS_CSV, PASSWORD_XLSX
+from conftest import COMPANY_XLSX, CUSTOMERS_CSV, PASSWORD_XLSX, without_header
 from data_health_check import profiler
 
 
@@ -193,3 +193,73 @@ def test_value_quoting_library_warnings_are_ignored_process_wide():
         workbook = load_workbook(io.BytesIO(workbook_bytes(build)))
         _ = [cell.value for row in workbook.active for cell in row]
     assert not [w for w in caught if "968226991" in str(w.message)]
+
+
+# --- Files without a header row ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "cell",
+    [
+        "keiko.ellison0@example.com",
+        "192.0.2.23",
+        "(202) 555-0109",
+        "968-22-6991",
+        "4111 1111 1111 1111",
+        "2025-07-14",
+        "163.25",
+        "10000",
+        12345,
+        1.5,
+    ],
+)
+def test_first_row_cells_that_look_like_data(cell):
+    assert profiler.header_looks_like_data(["name", cell])
+
+
+@pytest.mark.parametrize(
+    "names",
+    [
+        ["customer_id", "full_name", "email"],
+        ["region", "2023", "2024"],  # year columns are names
+        ["Q1 2024", "Phone (home)", "Unnamed: 2"],
+        ["1", "2", "3"],
+        [None, "", "notes"],
+    ],
+)
+def test_ordinary_headers_are_kept(names):
+    assert not profiler.header_looks_like_data(names)
+
+
+def test_csv_without_a_header_row_gets_obvious_column_names():
+    profile = profile_lite(without_header(CUSTOMERS_CSV.read_bytes()), "raw.csv")
+    sheet = profile.sheets[0]
+    assert not sheet.has_header
+    assert sheet.row_count == 200  # the first row is data, not lost
+    names = [column["column_name"] for column in sheet.columns]
+    assert names[:2] == ["Column 1 (no header)", "Column 2 (no header)"]
+    assert "first row looks like data" in sheet.note
+    assert not any("@" in name for name in names)
+
+
+def test_single_row_without_a_header_is_profiled():
+    profile = profile_lite(b"968-22-6991,keiko@example.com\n", "one.csv")
+    assert profile.sheets[0].row_count == 1
+    assert not profile.sheets[0].has_header
+
+
+def test_xlsx_sheet_without_a_header_row():
+    def build(wb):
+        wb.active.title = "Raw"
+        wb.active.append(["keiko@example.com", 968226991, "Keiko Ellison"])
+        wb.active.append(["hector@example.com", 974601812, "Hector Vance"])
+        wb.create_sheet("Named").append(["id", "name"])
+        wb["Named"].append([1, "a"])
+
+    raw, named = profile_lite(workbook_bytes(build), "mixed.xlsx").sheets
+    assert (raw.has_header, raw.row_count) == (False, 2)
+    assert [c["column_name"] for c in raw.columns][0] == "Column 1 (no header)"
+    assert (named.has_header, [c["column_name"] for c in named.columns]) == (
+        True,
+        ["id", "name"],
+    )

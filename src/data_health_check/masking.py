@@ -11,7 +11,10 @@ can give a real value away:
 * in Lite mode no labels exist, so no column can be shown to be safe: every
   sample, and min/max/median of every number column, is replaced by
   ``[hidden: Lite mode]``, and so are mean and stddev when a number column
-  has two distinct values or fewer.
+  has two distinct values or fewer;
+* a column the labeler labels "could not determine" (often a mix of kinds of
+  values, such as emails and phone numbers) is treated like Lite mode, with
+  ``[hidden: could not determine]``.
 
 Detection is only as good as DataProfiler's labeler: a column it doesn't
 recognise (for example names labelled UNKNOWN) is not masked.
@@ -22,6 +25,8 @@ from __future__ import annotations
 from typing import Any
 
 LITE_MODE_PLACEHOLDER = "[hidden: Lite mode]"
+UNCERTAIN_LABEL = "could not determine"  # DataProfiler's own wording
+UNCERTAIN_PLACEHOLDER = f"[hidden: {UNCERTAIN_LABEL}]"
 
 # Statistics that can be equal to one real value in the column.
 VALUE_STATISTICS: tuple[str, ...] = ("min", "max", "median")
@@ -59,6 +64,11 @@ def sensitive_labels(data_label: str | None) -> list[str]:
     return [part for part in parts if part in SENSITIVE_LABELS]
 
 
+def is_uncertain(data_label: str | None) -> bool:
+    """True if the labeler could not tell what the column holds."""
+    return bool(data_label) and data_label.strip().lower() == UNCERTAIN_LABEL
+
+
 def is_sensitive(data_label: str | None) -> bool:
     """Return True if sample values for this label must be masked."""
     return bool(sensitive_labels(data_label))
@@ -82,6 +92,8 @@ def mask_samples(
         return []
     if not labels_checked:
         return [LITE_MODE_PLACEHOLDER]
+    if is_uncertain(data_label):
+        return [UNCERTAIN_PLACEHOLDER]
     if is_sensitive(data_label):
         return [mask_placeholder(data_label)]
     return list(samples)
@@ -98,15 +110,15 @@ def protect_column(column: dict[str, Any], *, labels_checked: bool) -> dict[str,
     protected["sample_values"] = mask_samples(
         column.get("sample_values") or [], label, labels_checked=labels_checked
     )
-    if labels_checked:
-        if not is_sensitive(label):
-            return protected
+    if labels_checked and is_sensitive(label):
         placeholder = mask_placeholder(label)
         keys = VALUE_STATISTICS + AGGREGATE_STATISTICS
-    else:
+    elif labels_checked and not is_uncertain(label):
+        return protected
+    else:  # Lite mode, or a column the labeler couldn't identify
         if column.get("data_type") not in NUMBER_TYPES:
             return protected  # date min/max are not on the sensitive list
-        placeholder = LITE_MODE_PLACEHOLDER
+        placeholder = UNCERTAIN_PLACEHOLDER if labels_checked else LITE_MODE_PLACEHOLDER
         keys = VALUE_STATISTICS
         unique_count = column.get("unique_count")
         if unique_count is None or unique_count <= FEW_DISTINCT_VALUES:

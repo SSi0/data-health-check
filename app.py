@@ -211,6 +211,9 @@ def show_results(
     for column, (label, value) in zip(st.columns(len(metrics)), metrics, strict=True):
         column.metric(label, value)
 
+    for warning in profile.warnings:
+        st.warning(warning, icon=":material/warning:")
+
     exported = exporters.export_profile(profile, reveal_sensitive=reveal)
     st.download_button(
         f"Download profile ({exported.file_name})",

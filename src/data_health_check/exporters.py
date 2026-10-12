@@ -223,7 +223,7 @@ def to_xlsx_bytes(profile: DatasetProfile, *, reveal_sensitive: bool = False) ->
                 sheet.rows_profiled,
                 profile.profiled_at,
                 profile.mode,
-                sheet.note,
+                " ".join(text for text in (sheet.warning, sheet.note) if text),
             )
             for sheet in profile.sheets
         ],

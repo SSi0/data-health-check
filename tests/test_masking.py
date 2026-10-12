@@ -26,9 +26,7 @@ def test_every_sensitive_label_is_masked(label):
     assert masking.mask_samples(["a", "b"], label) == [f"[masked: {label}]"]
 
 
-@pytest.mark.parametrize(
-    "label", ["INTEGER", "FLOAT", "DATE", "UNKNOWN", "URL", "could not determine"]
-)
+@pytest.mark.parametrize("label", ["INTEGER", "FLOAT", "DATE", "UNKNOWN", "URL"])
 def test_other_labels_are_not_masked(label):
     assert masking.mask_samples(["a", "b"], label) == ["a", "b"]
 
@@ -138,3 +136,19 @@ def test_lite_mode_hides_averages_of_columns_with_few_distinct_values(
     assert (lite["mean"], lite["stddev"]) == (
         (expected, expected) if hidden else expected
     )
+
+
+@pytest.mark.parametrize("label", ["could not determine", "Could Not Determine "])
+def test_columns_the_labeler_could_not_identify_are_hidden(label):
+    assert masking.is_uncertain(label)
+    assert masking.mask_samples(["a@example.com", "555-0101"], label) == [
+        "[hidden: could not determine]"
+    ]
+
+
+def test_uncertain_number_columns_hide_values_like_lite_mode():
+    column = numeric_column(data_label="could not determine")
+    protected = masking.protect_column(column, labels_checked=True)
+    for key in ("min", "max", "median"):
+        assert protected[key] == "[hidden: could not determine]"
+    assert protected["mean"] == 949000000.0  # 150 distinct values: kept

@@ -262,3 +262,26 @@ def test_xlsx_is_built_without_temporary_files(monkeypatch):
     )
     workbook = load(exporters.to_xlsx_bytes(make_profile("xlsx")))
     assert workbook.sheetnames == ["Summary", "People", "Field guide"]
+
+
+def test_uncertain_columns_are_hidden_and_warned_about():
+    sheet = profiler.SheetProfile(
+        "People",
+        2,
+        2,
+        2,
+        [
+            column("contact", label="could not determine", samples=["a@b.co"]),
+            column("plan", label="UNKNOWN", samples=["Pro"]),
+        ],
+    )
+    profile = make_profile("xlsx", sheets=[sheet])
+    assert profile.warnings == [sheet.warning]
+    assert "1 column in sheet 'People' could not be identified" in sheet.warning
+    workbook = load(exporters.to_xlsx_bytes(profile))
+    notes = next(workbook["Summary"].iter_rows(min_row=2, values_only=True))[-1]
+    assert "could not be identified" in notes
+    rows = list(workbook["People"].iter_rows(values_only=True))
+    samples = rows[0].index("sample_values")
+    assert rows[1][samples] == "[hidden: could not determine]"
+    assert rows[2][samples] == "Pro"

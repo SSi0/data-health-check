@@ -49,13 +49,18 @@ or personal data. Use export_profile when the user wants the profile saved as a
 file. Pass absolute file paths ("~" is expanded).
 
 Privacy: sample values are off by default. In columns the labeler identifies
-as sensitive, sample values and min/max/median are replaced by
-"[masked: LABEL]"; in Lite mode (detect_pii=false) every sample, and
-min/max/median of number columns, is "[hidden: Lite mode]". Detection is
-automatic and can miss things: names are often labelled UNKNOWN, free text is
-not checked, and column names are taken from the file's first row as they are.
-Treat any unmasked value as possibly personal: request samples only when you
-need them, and don't repeat values to the user unless they ask.
+as sensitive, sample values and number statistics are replaced by
+"[masked: LABEL]"; in columns it labels "could not determine" (often a mix of
+kinds of values) they are "[hidden: could not determine]", and the result's
+"warnings" list says how many such columns there are; in Lite mode
+(detect_pii=false) every sample, and min/max/median of number columns, is
+"[hidden: Lite mode]". If a file's first row looks like data rather than
+column names, it is profiled as data and columns are named
+"Column 1 (no header)" and so on. Detection is automatic and can miss things:
+names are often labelled UNKNOWN and free text is not checked. Treat any
+unmasked value as possibly personal: request samples only when you need them,
+and don't repeat values to the user unless they ask. Tell the user about any
+warnings.
 """
 
 server = MCPServer(
@@ -143,18 +148,22 @@ SSNs, credit cards, addresses, IP addresses and so on). The file is read
 locally and is not modified.
 
 Sample values are off by default. In columns labelled as sensitive, samples
-and min/max/median are replaced by "[masked: <LABEL>]"; in Lite mode
-(detect_pii=false) every sample, and min/max/median of number columns, is
-"[hidden: Lite mode]". Detection is automatic and can miss columns (names
-are often labelled UNKNOWN, free text isn't checked), so treat any unmasked
-value as possibly personal.
+and number statistics are replaced by "[masked: <LABEL>]"; in columns
+labelled "could not determine" they are "[hidden: could not determine]"; in
+Lite mode (detect_pii=false) every sample, and min/max/median of number
+columns, is "[hidden: Lite mode]". Detection is automatic and can miss
+columns (names are often labelled UNKNOWN, free text isn't checked), so treat
+any unmasked value as possibly personal.
 
 Returns:
     A summary (file_name, file_format, mode, profiled_at, row_count,
-    column_count, sheet_count) and a list of sheets (sheet_name is null for
-    CSV), each with row_count, column_count, rows_profiled, sampled, note
-    and columns. Each column has column_name, null_count, null_percent,
-    unique_count, unique_ratio and rows_profiled, and, when they apply,
+    column_count, sheet_count), a "warnings" list (for example how many
+    columns could not be identified; pass these on to the user) and a list of
+    sheets (sheet_name is null for CSV), each with row_count, column_count,
+    rows_profiled, sampled, note (e.g. that the file has no header row, so
+    columns are named "Column 1 (no header)" and so on) and columns. Each
+    column has column_name, null_count, null_percent, unique_count,
+    unique_ratio and rows_profiled, and, when they apply,
     data_type, data_label, data_label_confidence, min, max, mean, median,
     stddev and sample_values (a column with no values has no data_type or
     label). Large tables are profiled on a random sample of rows; then

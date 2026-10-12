@@ -16,12 +16,13 @@ import io
 import logging
 import math
 import os
+import re
 import sys
 import threading
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path, PurePath
 from typing import Any
 
@@ -87,7 +88,12 @@ COLUMN_FIELDS: tuple[str, ...] = (
 LABEL_FIELDS: tuple[str, ...] = ("data_label", "data_label_confidence")
 
 FIELD_GUIDE: dict[str, str] = {
-    "column_name": "The column's name, taken from the first (header) row of your file.",
+    "column_name": (
+        "The column's name, taken from the first (header) row of your file. If "
+        "that row looks like data rather than names (for example emails or long "
+        "numbers), it is profiled as data and columns are named 'Column 1 (no "
+        "header)', 'Column 2 (no header)' and so on."
+    ),
     "data_type": (
         "The kind of values in the column: int (whole numbers), float (decimal "
         "numbers), datetime (dates or times) or string (text)."
@@ -95,8 +101,10 @@ FIELD_GUIDE: dict[str, str] = {
     "data_label": (
         "What the values appear to be, detected by a machine-learning model: for "
         "example EMAIL_ADDRESS, PHONE_NUMBER, SSN, ADDRESS, CREDIT_CARD, INTEGER, "
-        "or UNKNOWN when it can't tell. Two labels joined by | mean both were "
-        "about equally likely. Full mode only."
+        "or UNKNOWN for ordinary values. Two labels joined by | mean both were "
+        "about equally likely. 'could not determine' means the detector couldn't "
+        "tell (often a mix of kinds of values); such columns' examples are "
+        "hidden in case they hold personal data. Full mode only."
     ),
     "data_label_confidence": (
         "How sure the model is about the data label (the first one, if two are "
@@ -230,21 +238,60 @@ class SheetProfile:
     column_count: int
     rows_profiled: int
     columns: list[dict[str, Any]] = field(default_factory=list)
+    has_header: bool = True
 
     @property
     def sampled(self) -> bool:
         return self.rows_profiled < self.row_count
 
     @property
+    def uncertain_columns(self) -> list[str]:
+        """Columns the data labeler could not identify ("could not determine")."""
+        return [
+            column["column_name"]
+            for column in self.columns
+            if masking.is_uncertain(column.get("data_label"))
+        ]
+
+    @property
     def note(self) -> str:
         if self.row_count == 0:
             return "No data rows; nothing to profile."
+        notes = []
+        if not self.has_header:
+            notes.append(
+                "The first row looks like data, not column names, so it was "
+                f"profiled as data and the columns are named '{no_header_name(0)}', "
+                f"'{no_header_name(1)}' and so on."
+            )
         if self.sampled:
-            return (
+            notes.append(
                 f"Large table: statistics are based on a random sample of "
                 f"{self.rows_profiled:,} of {self.row_count:,} rows."
             )
-        return ""
+        return " ".join(notes)
+
+    @property
+    def warning(self) -> str:
+        """A warning about columns whose values were hidden as uncertain, if any."""
+        names = self.uncertain_columns
+        if not names:
+            return ""
+        where = (
+            f"sheet '{self.sheet_name}'" if self.sheet_name is not None else "this file"
+        )
+        count = f"{len(names)} column{'s' if len(names) > 1 else ''}"
+        listed = ", ".join(f"'{name}'" for name in names)
+        return (
+            f"{count} in {where} could not be identified by the sensitive data "
+            f"detector ({listed}). Their example values are hidden, in case they "
+            "hold personal data; the rest of the profile is complete."
+        )
+
+
+def no_header_name(index: int) -> str:
+    """Name for the column at ``index`` (0-based) of a table without a header."""
+    return f"Column {index + 1} (no header)"
 
 
 @dataclass
@@ -264,6 +311,10 @@ class DatasetProfile:
     @property
     def row_count(self) -> int:
         return sum(sheet.row_count for sheet in self.sheets)
+
+    @property
+    def warnings(self) -> list[str]:
+        return [sheet.warning for sheet in self.sheets if sheet.warning]
 
     @property
     def column_count(self) -> int:
@@ -329,6 +380,7 @@ class DatasetProfile:
             "row_count": self.row_count,
             "column_count": self.column_count,
             "sheet_count": len(self.sheets),
+            "warnings": self.warnings,
             "sheets": sheets,
         }
 
@@ -361,12 +413,16 @@ def check_size(size_bytes: int) -> None:
         )
 
 
-def read_tables(data: bytes, file_format: str) -> list[tuple[str | None, pd.DataFrame]]:
-    """Read ``data`` into ``(sheet_name, frame)`` pairs.
+Table = tuple[str | None, pd.DataFrame, bool]  # (sheet name, frame, has_header)
 
-    CSV files give one pair with ``sheet_name=None``. Values are read as text
+
+def read_tables(data: bytes, file_format: str) -> list[Table]:
+    """Read ``data`` into ``(sheet_name, frame, has_header)`` tables.
+
+    CSV files give one table with ``sheet_name=None``. Values are read as text
     (or raw cell values for XLSX) so that DataProfiler does its own typing
-    and null detection.
+    and null detection. ``has_header`` is False when the first row looked
+    like data (see :func:`header_looks_like_data`).
     """
     try:
         with warnings.catch_warnings():
@@ -374,7 +430,7 @@ def read_tables(data: bytes, file_format: str) -> list[tuple[str | None, pd.Data
             # value ... is outside the limits for dates"): never print them.
             warnings.simplefilter("ignore")
             if file_format == "csv":
-                return [(None, _read_csv(data))]
+                return [(None, *_read_csv(data))]
             if file_format == "xlsx":
                 return _read_xlsx(data)
     except MemoryError:
@@ -385,7 +441,7 @@ def read_tables(data: bytes, file_format: str) -> list[tuple[str | None, pd.Data
 _EMPTY_MESSAGE = "This file is empty. Please choose a file with data in it."
 
 
-def _read_csv(data: bytes) -> pd.DataFrame:
+def _read_csv(data: bytes) -> tuple[pd.DataFrame, bool]:
     if not data.strip():
         raise EmptyFileError(_EMPTY_MESSAGE)
     if data.startswith((_ZIP_MAGIC, _OLE_MAGIC)):
@@ -395,14 +451,22 @@ def _read_csv(data: bytes) -> pd.DataFrame:
         )
     encoding = _detect_text_encoding(data)
     delimiter = _sniff_delimiter(data[:_SNIFF_BYTES].decode(encoding, errors="ignore"))
-    try:
-        frame = pd.read_csv(
+
+    def read(header: int | None) -> pd.DataFrame:
+        return pd.read_csv(
             io.BytesIO(data),
             sep=delimiter,
             encoding=encoding,
             dtype=str,
             keep_default_na=False,
+            header=header,
         )
+
+    try:
+        frame = read(header=0)
+        has_header = not header_looks_like_data(frame.columns)
+        if not has_header:
+            frame = _without_header(read(header=None))
     except pd.errors.EmptyDataError:
         raise EmptyFileError(_EMPTY_MESSAGE) from None
     except pd.errors.ParserError as exc:
@@ -420,7 +484,7 @@ def _read_csv(data: bytes) -> pd.DataFrame:
             "This file has column headers but no data rows, so there is nothing "
             "to profile."
         )
-    return frame
+    return frame, has_header
 
 
 _ENCODING_MESSAGE = (
@@ -469,7 +533,7 @@ def _sniff_delimiter(sample: str) -> str:
         return ","
 
 
-def _read_xlsx(data: bytes) -> list[tuple[str | None, pd.DataFrame]]:
+def _read_xlsx(data: bytes) -> list[Table]:
     if not data.strip():
         raise EmptyFileError(_EMPTY_MESSAGE)
     if data.startswith(_OLE_MAGIC):
@@ -503,13 +567,68 @@ def _read_xlsx(data: bytes) -> list[tuple[str | None, pd.DataFrame]]:
 
     tables = []
     for name, frame in sheets.items():
-        tables.append((str(name), _drop_blank_edges(frame)))
-    if all(frame.empty for _, frame in tables):
+        if header_looks_like_data(frame.columns):
+            raw = pd.read_excel(
+                io.BytesIO(data), sheet_name=name, header=None, dtype=object
+            )
+            raw = raw.dropna(how="all").dropna(axis="columns", how="all")
+            tables.append(
+                (str(name), _without_header(raw.reset_index(drop=True)), False)
+            )
+        else:
+            tables.append((str(name), _drop_blank_edges(frame), True))
+    if all(frame.empty for _, frame, _ in tables):
         raise EmptyFileError(
             "None of the sheets in this workbook contain data, so there is "
             "nothing to profile."
         )
     return tables
+
+
+_EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+_IPV4 = re.compile(r"\d{1,3}(?:\.\d{1,3}){3}")
+_DIGITS_AND_PUNCTUATION = re.compile(r"[\d\s()+./-]+")
+_NUMBER = re.compile(r"[-+]?\d+(?:\.\d+)?")
+
+
+def header_looks_like_data(names: Any) -> bool:
+    """True if a table's first row looks like a data record, not column names.
+
+    Column names are words such as "customer_id" or short numbers such as
+    "2024". A first row with an email or IP address, a phone/SSN/card-like
+    number, a long or decimal number, or a date is treated as data, so a file
+    without a header row doesn't expose its first record as column names.
+    """
+    return any(_looks_like_data(name) for name in names)
+
+
+def _looks_like_data(value: Any) -> bool:
+    if value is None or isinstance(value, bool):
+        return False
+    if isinstance(value, datetime | date | pd.Timestamp):
+        return True
+    if isinstance(value, int | float):
+        if isinstance(value, float) and not math.isfinite(value):
+            return False  # empty header cell read as NaN
+        return not float(value).is_integer() or abs(value) >= 10_000
+    text = str(value).strip()
+    if not text or text.startswith("Unnamed:"):
+        return False
+    if _EMAIL.fullmatch(text) or _IPV4.fullmatch(text):
+        return True
+    if _DIGITS_AND_PUNCTUATION.fullmatch(text):
+        if sum(char.isdigit() for char in text) >= 7:
+            return True  # phone numbers, SSNs, card numbers, long IDs, dates
+        if _NUMBER.fullmatch(text):
+            return "." in text or abs(float(text)) >= 10_000
+    return False
+
+
+def _without_header(frame: pd.DataFrame) -> pd.DataFrame:
+    """Name the columns of a table read without a header row."""
+    return frame.set_axis(
+        [no_header_name(int(position)) for position in frame.columns], axis="columns"
+    )
 
 
 def _drop_blank_edges(frame: pd.DataFrame) -> pd.DataFrame:
@@ -677,10 +796,12 @@ def profile_file(
             labeler = (get_labeler or load_labeler)()
 
         sheets = []
-        for index, (sheet_name, frame) in enumerate(tables):
+        for index, (sheet_name, frame, has_header) in enumerate(tables):
             where = f"sheet '{sheet_name}'" if sheet_name is not None else "your data"
             step(0.15 + 0.8 * index / len(tables), f"Profiling {where}…")
-            sheets.append(profile_table(frame, sheet_name, labeler))
+            sheet = profile_table(frame, sheet_name, labeler)
+            sheet.has_header = has_header
+            sheets.append(sheet)
     except (OutOfMemoryError, MemoryError):
         message = OUT_OF_MEMORY_MESSAGE if detect_pii else OUT_OF_MEMORY_LITE_MESSAGE
         raise OutOfMemoryError(message) from None

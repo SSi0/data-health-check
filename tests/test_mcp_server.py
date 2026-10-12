@@ -17,7 +17,14 @@ from mcp.client.stdio import get_default_environment
 from openpyxl import load_workbook
 
 import data_health_check
-from conftest import COMPANY_XLSX, CUSTOMERS_CSV, PASSWORD_XLSX, digits_only_ids_csv
+from conftest import (
+    COMPANY_XLSX,
+    CUSTOMERS_CSV,
+    PASSWORD_XLSX,
+    digits_only_ids_csv,
+    mixed_contacts_csv,
+    without_header,
+)
 from data_health_check import masking, mcp_server, profiler
 
 SAMPLE_FILES = [CUSTOMERS_CSV, COMPANY_XLSX]
@@ -643,3 +650,30 @@ def test_link_loops_dangling_links_and_other_targets_are_explained(workdir):
 def test_nul_characters_in_paths_are_explained():
     message = error_text(call("profile_dataset", file_path="/tmp/bad\x00name.csv"))
     assert "isn't allowed" in message
+
+
+def test_headerless_file_does_not_expose_its_first_record(tmp_path):
+    path = tmp_path / "raw.csv"
+    path.write_bytes(without_header(CUSTOMERS_CSV.read_bytes()))
+    result = call("profile_dataset", file_path=str(path), detect_pii=False)
+    data = ok_json(result)
+    names = [c["column_name"] for c in columns(data)]
+    assert names[0] == "Column 1 (no header)"
+    assert "no header" in data["sheets"][0]["note"]
+    assert_no_raw_sensitive_values(result.content[0].text)
+    assert data["warnings"] == []
+
+
+@pytest.mark.full_mode
+def test_unidentified_columns_are_hidden_with_a_warning(tmp_path):
+    path = tmp_path / "contacts.csv"
+    path.write_bytes(mixed_contacts_csv())
+    result = call("profile_dataset", file_path=str(path), include_samples=True)
+    data = ok_json(result)
+    by_name = {c["column_name"]: c for c in columns(data)}
+    assert by_name["contact"]["data_label"] == "could not determine"
+    assert by_name["contact"]["sample_values"] == "[hidden: could not determine]"
+    assert len(data["warnings"]) == 1
+    assert "could not be identified" in data["warnings"][0]
+    assert "'contact'" in data["warnings"][0]
+    assert_no_raw_sensitive_values(result.content[0].text)
